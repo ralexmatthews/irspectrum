@@ -1,3 +1,7 @@
+"""
+This can be ran from the command line with the pdf file you wish to extract from
+as an argument, it will save the image in the same directory you are in.
+"""
 import PyPDF2
 
 from PIL import Image
