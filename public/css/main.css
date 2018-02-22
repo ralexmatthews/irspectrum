@@ -1,0 +1,24 @@
+.title {
+	margin: 0 2rem 0 2rem;
+}
+
+.navigationBar {
+	margin: 0 1rem 0 1rem;
+}
+
+.hidden {
+	display: none;
+}
+
+.resize {
+	width: 540px;
+	height: auto;
+}
+
+#findButton {
+	margin: 1rem 1rem 1rem 5rem;
+}
+
+#selectFile {
+	margin: 0 1rem 0 0;
+}
