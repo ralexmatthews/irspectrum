@@ -7,7 +7,6 @@ import warnings
 import ntpath
 warnings.filterwarnings("ignore")
 
-
 class IRSpectrumMain(Frame):
     '''This is the main menu class of the tkinter program. It will layout the
     main GUI and contain most of the functions we are going to need'''
@@ -159,10 +158,10 @@ class IRSpectrumMain(Frame):
             self.image2 = Image.open(jpegsPath + '\\' + winners[1])
             self.image3 = Image.open(jpegsPath + '\\' + winners[2])
             self.image4 = Image.open(jpegsPath + '\\' + winners[3])
-            self.image1 = self.image1.resize((400, 300), Image.ANTIALIAS)
-            self.image2 = self.image2.resize((400, 300), Image.ANTIALIAS)
-            self.image3 = self.image3.resize((400, 300), Image.ANTIALIAS)
-            self.image4 = self.image4.resize((400, 300), Image.ANTIALIAS)
+            self.image1 = self.image1.resize((300, 225), Image.ANTIALIAS)
+            self.image2 = self.image2.resize((300, 225), Image.ANTIALIAS)
+            self.image3 = self.image3.resize((300, 225), Image.ANTIALIAS)
+            self.image4 = self.image4.resize((300, 225), Image.ANTIALIAS)
             self.winner1 = ImageTk.PhotoImage(image=self.image1)
             self.winner2 = ImageTk.PhotoImage(image=self.image2)
             self.winner3 = ImageTk.PhotoImage(image=self.image3)
