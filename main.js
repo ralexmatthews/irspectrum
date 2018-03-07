@@ -9,12 +9,14 @@ const formidable = require('formidable');
 const path = require('path');
 const fs = require('fs');
 const getpixels = require('get-pixels');
-// const spawn = require('child_process').spawn;
+const spawn = require('child_process').spawn;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
 	extended: true,
 }));
+
+app.use('/favicon.ico', express.static('./public/favicon.ico'));
 
 // Setup our static resources folder
 app.use(express.static('public'));
@@ -30,6 +32,10 @@ app.get('/', function (req, res) {
 
 app.get('/aboutus', function (req, res) {
 	res.render('aboutus');
+});
+
+app.post('/convertpdf', function (req, res) {
+	//const converting = spawn('./src/jpegExtract.py')
 });
 
 app.post('/getmatch', function (req, res) {
