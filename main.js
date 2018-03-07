@@ -9,6 +9,7 @@ const formidable = require('formidable');
 const path = require('path');
 const fs = require('fs');
 const getpixels = require('get-pixels');
+// const spawn = require('child_process').spawn;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
