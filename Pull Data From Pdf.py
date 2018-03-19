@@ -10,76 +10,23 @@ import os
 from os import path
 from PIL import Image, ImageTk
 from math import log
-warnings.filterwarnings("ignore")
 
-curpdf=0#keep track of progress
+from IR_Functions import PullImages
 
-filedir=[file for file in os.listdir("IR samples") if file.endswith(".pdf")]
+if len(sys.argv)==1:
+    filedir=[]#["IR samples\\"+file for file in os.listdir("IR samples") if file.endswith(".pdf")]
+    filedir+=["query\\"+file for file in os.listdir("query") if file==("Query.pdf")]
+    print(filedir)
+else:
+    filedir=[sys.argv[1]]
 
 for file in filedir:
-    curpdf+=1
-    print(curpdf,"of",len(filedir))
 
-    '''
-    Pull graph images from PDF's
-    '''
-    number = 0
-    def recurse(page, xObject):
-        global number
-
-        xObject = xObject['/Resources']['/XObject'].getObject()
-
-        images=[]
-        
-        for obj in xObject:
-
-            if xObject[obj]['/Subtype'] == '/Image':
-                size = (xObject[obj]['/Width'], xObject[obj]['/Height'])
-                data = xObject[obj]._data
-                if xObject[obj]['/ColorSpace'] == '/DeviceRGB':
-                    mode = "RGB"
-                else:
-                    mode = "P"
-
-                #imagename = "%s"%(abspath[:-4], p, obj[1:])
-
-                if xObject[obj]['/Filter'] == '/FlateDecode':
-                    img = Image.frombytes(mode, size, data)
-                    img.save(filename + ".png")
-                    number += 1
-                    images+=[filename + ".png"]
-                elif xObject[obj]['/Filter'] == '/DCTDecode':
-                    img = open(filename + ".jpg", "wb")
-                    img.write(data)
-                    img.close()
-                    number += 1
-                    images+=[filename + ".jpg"]
-                elif xObject[obj]['/Filter'] == '/JPXDecode':
-                    img = open(filename + ".jp2", "wb")
-                    img.write(data)
-                    img.close()
-                    number += 1
-                    images+=[filename + ".jp2"]
-            else:
-                recurse(page, xObject[obj])
-        return images
-
-
-    try:
-        filename = "IR samples\\"+file
-        abspath = path.abspath(filename)
-    except BaseException:
-        print('Usage :\nPDF_extract_images file.pdf page1 page2 page3 …')
-        sys.exit()
-
-
-    f = PyPDF2.PdfFileReader(open(filename, "rb"))
-
-    page0 = f.getPage(0)
-
-    p = 1
-    images=recurse(p, page0)
-
+    fname=file.split("\\")[-1]
+    dest="data\\"+fname
+    
+    images = PullImages(file)
+    
     '''
     Open the source image
     Crop the image
@@ -168,7 +115,7 @@ for file in filedir:
                     converty(graphData[x][0]),converty(graphData[x][1]))]
 
     #save data
-    f = open("data\\"+file+".data", "w")
+    f = open(dest+".data", "w")
     for element in data:
         f.write(str(element[0])+","+str(element[1])+","+str(element[2])+'\n')
     f.close()
@@ -227,21 +174,21 @@ for file in filedir:
             
             s1=0
             j=1
-            while i+j<lenl and l[i+j][2] <= cury:
+            while i+j<lenl and l[i+j][2] <= cury and j<11:
                 s1+= (cury - l[i+j][2]) * (l[i+j][0]-l[i+j-1][0])
                 j+=1
 
             #Same opperation but searching left
             s2=0
             j=-1
-            while i+j>=0 and l[i+j][2] <= cury:
+            while i+j>=0 and l[i+j][2] <= cury and j>-11:
                 s2+= (cury - l[i+j][2]) * (l[i+j+1][0]-l[i+j][0])
                 j-=1
 
             #take the lowest of the 2 values
             #Note: log may not be useful. It was added to decrease the weight of tall peaks
             if min(s1,s2)>0:
-                retlist+=[(curx,log(min(s1,s2)+1,2))]
+                retlist+=[(curx,log(min(s1,s2)*cury+1,2))]
             else:#white 0 to new curve if the point was not a peak
                 retlist+=[(curx,0)]
                     
@@ -301,7 +248,7 @@ for file in filedir:
         for each in transformDict[k]:
             d+=[str(each[0])+','+str(each[1])]
             #save data
-            f = open("data\\"+file+"."+k, "w")
+            f = open(dest+"."+k, "w")
             for element in d:
                 f.write(str(element) + '\n')
             f.close()
@@ -309,6 +256,5 @@ for file in filedir:
     #save graph with transformations
     img = Image.new('RGB', (Width, Height))
     img.putdata(graph)
-    img.save("data\\"+file+'.transform.png')
+    img.save(dest+'.transform.png')
 
-print('done')
