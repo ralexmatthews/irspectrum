@@ -15,15 +15,20 @@ filedir=[file for file in os.listdir("IR samples") if file.endswith(".pdf") and 
 difList=[]
 
 #only compare by peak for now
-tranformTypes=["peak"]#"basic","absD",
+tranformTypes={"peak": (255,0,0), "basic": (0,255,0),"absD":(0,0,255)}
+#tranformTypes={"peak": (255,0,0), "basic": (0,255,0)}
+#tranformTypes={"absD":(0,0,255)}
+#tranformTypes={"peak": (255,0,0)}
+#tranformTypes={"basic": (0,255,0)}
+
 
 for i in range(len(filedir)):
-    print(str(i+1),"of",len(filedir))
 
+    difference=0
     for tType in tranformTypes:
         
         file1=filedir[i]+"."+tType
-        file2="Query1.pdf."+tType
+        file2="Query.pdf."+tType
 
         def str2Tuple(s):#convert strings to 2 element tuples (float,float)
             
@@ -57,14 +62,16 @@ for i in range(len(filedir)):
             return round((y-yMin)/yRange*Height)
 
         graph=[]
-        #create graph as white blank image
+        #create graph as black blank image
         for x in range(Width):
             for y in range(Height):
-                graph+=[(255,255,255)]
+                graph+=[(0,0,0)]
 
         #draw a pixel
-        def drawPix(x,y,c):
-            graph[int(y*Width+x)]=c
+        def addPix(x,y,c):
+            r,g,b=c
+            oR,oG,oB = graph[int(y*Width+x)]
+            graph[int(y*Width+x)]=min(255,r+oR),min(255,g+oG),min(255,b+oB)
 
         dif=0
         #total the differences between the compound and the query
@@ -76,7 +83,7 @@ for i in range(len(filedir)):
 
             x=devertx(transformation1[a][0])
             for y in range(y1,y2+1):
-                drawPix(x,y,(255,0,0))
+                addPix(x,y,tranformTypes[tType])
 
         #save image
         img = Image.new('RGB', (Width, Height))
@@ -89,17 +96,22 @@ for i in range(len(filedir)):
         f.write("difference = "+ str(dif) + '\n')
         f.close()
         '''
-        
-        difList+=[(dif,i)]
+
+        difference+=dif
+
+    difList+=[(difference,i)]
 
 #sort compounds by difference
 difList.sort()
+
+retString=""
 
 #save list of compound differences to file
 f = open("output\\"+'Ranked Differences.txt', "w")
 for i in range(len(difList)):
     f.write('#'+str(i+1)+': '+filedir[difList[i][1]]+'\n')
+    retString+=filedir[difList[i][1]][:-4]+" "
     f.write("difference = "+ str(difList[i][0]) + '\n\n')
 f.close()
 
-print("done")
+print(retString.strip())
