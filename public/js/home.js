@@ -19,11 +19,15 @@ input.onchange = function () {
 
 	let ext = imageInput.name.substring(imageInput.name.length - 3);
 
-	if (ext == 'jpg') {
+	if (ext == 'jpg' || ext == 'pdf') {
 		// create html stuff
 		let span = document.createElement('span');
 		let displayImage = document.createElement('img');
-		displayImage.src = window.URL.createObjectURL(imageInput);
+		if (ext == 'jpg') {
+			displayImage.src = window.URL.createObjectURL(imageInput);
+		} else {
+			displayImage.src = 'http://localhost:3000/images/pdf.png';
+		}
 		displayImage.classList.add('resize');
 		span.id = 'displayPic';
 		document.getElementById('filename').innerText = input.files[0].name;
@@ -35,13 +39,6 @@ input.onchange = function () {
 
 		document.body.appendChild(span);
 		span.appendChild(displayImage);
-	} else if (ext === 'pdf') {
-		// TODO: Implement me
-
-		// if there is already a picture there, remove it
-		if (document.getElementById('displayPic')) {
-			document.body.removeChild(document.getElementById('displayPic'));
-		}
 	}
 
 	// enable the find button once file is uploaded

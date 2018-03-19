@@ -34,10 +34,6 @@ app.get('/aboutus', function (req, res) {
 	res.render('aboutus');
 });
 
-app.post('/convertpdf', function (req, res) {
-	//const converting = spawn('./src/jpegExtract.py')
-});
-
 app.post('/getmatch', function (req, res) {
 	// set up recieving file
 	let form = new formidable.IncomingForm();

@@ -1,15 +1,17 @@
 # irspectrum
-This is the repository for the MSU CSC450 IR Spectrum project. This is where we are going 
-to keep all of the relevant code, documentation, and other files needed for the project.
-I have created this repository, so technically it says this repo belongs to me, but you all
-will still be able to commit pull and commit to it because it is set to public. Once you 
-all have GitHub accounts, we will work on permissions and other stuff like that to make
-it belong to all of us. If you have any questions, feel free to email at:
+Hello all!
 
-ram2539@live.missouristate.edu
+This is the repository for our CSC450 project. This application is a node.js/express server that will take IR Spectrum readings from the user and compare those graphs to the graphs already stored in the database. 
 
-or once you are in the slack group (https://csc450-irspectrum.slack.com) you can contact 
-me in there as well.
+To run our application, start by downloading the repository. Then you will need another file not on GitHub due to size constraints. It can be located at https://drive.google.com/open?id=1KxAq0WA-OUHefGoLrSSyV3DG2H1yB2pu. Once values.json has been downloaded, place it in ./src/ folder. Once they have been downloaded and set up, open the shell of your choice, go to the directory of the project, and input
 
-Have a nice day,
-- Alex Matthews
+```console
+npm i
+node main.js
+```
+
+and then you should be able to visit the website at http://localhost:3000
+
+For all comments, concerns, questions, etc., you can contact me at amatthews4851@gmail.com
+
+Thank you and enjoy.
