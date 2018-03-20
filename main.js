@@ -9,11 +9,14 @@ const formidable = require('formidable');
 const path = require('path');
 const fs = require('fs');
 const getpixels = require('get-pixels');
+const spawn = require('child_process').spawn;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
 	extended: true,
 }));
+
+app.use('/favicon.ico', express.static('./public/favicon.ico'));
 
 // Setup our static resources folder
 app.use(express.static('public'));

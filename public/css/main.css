@@ -22,3 +22,11 @@
 #selectFile {
 	margin: 0 1rem 0 0;
 }
+
+.graphbuttons {
+	margin: 1rem 1rem 1rem 1rem;
+}
+
+.name {
+	width: 20px;
+}
