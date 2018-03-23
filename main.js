@@ -61,53 +61,59 @@ app.post('/getmatch', function (req, res) {
 
 	// once its finished saving, do the business. This is where the magic comparing happens
 	form.on('end', () => {
+		let winners = runJoshsPython(filepath);
 		setTimeout(() => {
-			// get pixels in the form pixelsArray[x][y] = [r, g, b, a]
-			let pixelsArray = getArrayPixels(filepath);
+			console.log(winners);
+			winners = winners.split(' ');
+			console.log(winners);
+			res.send(JSON.stringify({
+				1: winners[0],
+				2: winners[1],
+				3: winners[2],
+				4: winners[3],
+			}));
+		}, 10);
+		// setTimeout(() => {
+		// 	// get pixels in the form pixelsArray[x][y] = [r, g, b, a]
+		// 	let pixelsArray = getArrayPixels(filepath);
 
-			// pause for a 1/20th of a second for the function above to work
-			setTimeout(() => {
-				// alrighty boys. This is where the search function is going to be.
+		// 	// pause for a 1/20th of a second for the function above to work
+		// 	setTimeout(() => {
+		// 		// alrighty boys. This is where the search function is going to be.
 
-				// arrays for algorithm
-				let compare = [];
-				let differences = [];
+		// 		// arrays for algorithm
+		// 		let compare = [];
+		// 		let differences = [];
 
-				// height array for user uploaded file
-				let original = getHeightGraph(pixelsArray);
+		// 		// height array for user uploaded file
+		// 		let original = getHeightGraph(pixelsArray);
 
-				// load arrays from JSON
-				for (let element in data) {
-					compare.push(getHeightGraph(data[element]));
-				}
+		// 		// load arrays from JSON
+		// 		for (let element in data) {
+		// 			compare.push(getHeightGraph(data[element]));
+		// 		}
 
-				compare.forEach(element => {
-					let sum = 0;
-					for (let x = 0; x < element.length; x++) {
-						sum += Math.abs(original[x] - element[x]);
-					}
-					differences.push(sum);
-				});
+		// 		compare.forEach(element => {
+		// 			let sum = 0;
+		// 			for (let x = 0; x < element.length; x++) {
+		// 				sum += Math.abs(original[x] - element[x]);
+		// 			}
+		// 			differences.push(sum);
+		// 		});
 
-				// create object with key=height, value=name pairs to find winners
-				let names = Object.getOwnPropertyNames(data);
-				let winners = {};
-				let counter = 0;
-				differences.forEach(difference => {
-					winners[difference] = names[counter];
-					counter++;
-				});
+		// 		// create object with key=height, value=name pairs to find winners
+		// 		let names = Object.getOwnPropertyNames(data);
+		// 		let winners = {};
+		// 		let counter = 0;
+		// 		differences.forEach(difference => {
+		// 			winners[difference] = names[counter];
+		// 			counter++;
+		// 		});
 
-				names = Object.getOwnPropertyNames(winners);
+		// 		names = Object.getOwnPropertyNames(winners);
 
-				res.send(JSON.stringify({
-					1: winners[names[0]],
-					2: winners[names[1]],
-					3: winners[names[2]],
-					4: winners[names[3]],
-				}));
-			}, 50);
-		}, 50);
+		// 	}, 50);
+		// }, 50);
 	});
 });
 
@@ -165,4 +171,20 @@ let getHeightGraph = function (imageArray) {
 	}
 
 	return heightGraph;
+};
+
+let runJoshsPython = function (pathToPDF) {
+	const pythonFile = spawn('python', ['Pull Data From Pdf.py', String(pathToPDF)]);
+
+	pythonFile.on('close', () => {
+		const comparePy = spawn('python', ['Compare To Query.py']);
+
+		comparePy.stdout.on('data', chunk => {
+			let textchunk = chunk.toString('utf8');
+
+			return textchunk;
+		});
+	});
+
+
 };
