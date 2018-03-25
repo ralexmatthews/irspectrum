@@ -61,18 +61,7 @@ app.post('/getmatch', function (req, res) {
 
 	// once its finished saving, do the business. This is where the magic comparing happens
 	form.on('end', () => {
-		let winners = runJoshsPython(filepath);
-		setTimeout(() => {
-			console.log(winners);
-			winners = winners.split(' ');
-			console.log(winners);
-			res.send(JSON.stringify({
-				1: winners[0],
-				2: winners[1],
-				3: winners[2],
-				4: winners[3],
-			}));
-		}, 10);
+		runJoshsPython(filepath);
 		// setTimeout(() => {
 		// 	// get pixels in the form pixelsArray[x][y] = [r, g, b, a]
 		// 	let pixelsArray = getArrayPixels(filepath);
@@ -174,17 +163,46 @@ let getHeightGraph = function (imageArray) {
 };
 
 let runJoshsPython = function (pathToPDF) {
+	console.log('here');
 	const pythonFile = spawn('python', ['Pull Data From Pdf.py', String(pathToPDF)]);
 
+	pythonFile.on('error', err => {
+		console.log(err);
+	});
+
 	pythonFile.on('close', () => {
-		const comparePy = spawn('python', ['Compare To Query.py']);
+		console.log('got here');
+		const comparePy = spawn('python', ['Compare To Query.py'], {
+			stdio: [1, 'pipe']
+		});
+
+		comparePy.on('error', err => {
+			console.log('error:', err);
+		});
 
 		comparePy.stdout.on('data', chunk => {
+			console.log('got here 1');
 			let textchunk = chunk.toString('utf8');
 
 			return textchunk;
 		});
+
+		comparePy.on('exit', code => {
+			console.log(code);
+		});
 	});
 
 
+};
+
+let returnResults = function (winners) {
+	console.log(winners);
+	winners = winners.split(' ');
+	console.log(winners);
+	res.send(JSON.stringify({
+		1: winners[0],
+		2: winners[1],
+		3: winners[2],
+		4: winners[3],
+	}));
 };
