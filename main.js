@@ -188,7 +188,7 @@ let runJoshsPython = function (pathToPDF) {
 		});
 
 		comparePy.on('exit', code => {
-			console.log(code);
+			console.log('exit:', code);
 		});
 	});
 
