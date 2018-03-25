@@ -14,16 +14,19 @@ from math import log
 from IR_Functions import PullImages
 
 if len(sys.argv)==1:
-    filedir=[]#["IR samples\\"+file for file in os.listdir("IR samples") if file.endswith(".pdf")]
-    filedir+=["query\\"+file for file in os.listdir("query") if file==("Query.pdf")]
-    print(filedir)
+    filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
+    filedir+=[os.path.join("query",file) for file in os.listdir("query") if file==("Query.pdf")]
 else:
     filedir=[sys.argv[1]]
 
 for file in filedir:
 
-    fname=file.split("\\")[-1]
-    dest="data\\"+fname
+    if "\\" in file:
+        fname=file.split("\\")[-1]
+    else:
+        fname=file.split("/")[-1]
+        
+    dest=os.path.join("data",fname)
     
     images = PullImages(file)
     

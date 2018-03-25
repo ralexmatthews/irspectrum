@@ -39,12 +39,12 @@ for i in range(len(filedir)):
             return ( float(x) , float(y) )
 
         #read data for the compound
-        f = open("data\\"+file1, "r")
+        f = open(os.path.join("data",file1), "r")
         lines=f.readlines()
         transformation1=[str2Tuple(s.strip()) for s in lines]
 
         #read data for the query
-        f = open("data\\"+file2, "r")
+        f = open(os.path.join("data",file2), "r")
         lines=f.readlines()
         transformation2=[str2Tuple(s.strip()) for s in lines]
 
@@ -88,7 +88,7 @@ for i in range(len(filedir)):
         #save image
         img = Image.new('RGB', (Width, Height))
         img.putdata(graph)
-        img.save("output\\"+file1.split(".")[0]+tType+'.comp.png')
+        img.save(os.path.join("output",file1.split(".")[0]+tType+'.comp.png'))
         
         '''
         f = open("output\\"+file1.split(".")[0]+tType+'.comp.txt', "w")
@@ -107,7 +107,7 @@ difList.sort()
 retString=""
 
 #save list of compound differences to file
-f = open("output\\"+'Ranked Differences.txt', "w")
+f = open(os.path.join("output",'Ranked Differences.txt'), "w")
 for i in range(len(difList)):
     f.write('#'+str(i+1)+': '+filedir[difList[i][1]]+'\n')
     retString+=filedir[difList[i][1]][:-4]+" "
