@@ -68,36 +68,48 @@ const server = app.listen(3000, function () {
 	console.log(`Server started on port ${server.address().port}!`);
 });
 
+// this function runs the python programs
 let runJoshsPython = function (pathToPDF, res) {
+	// run 'Pull Data From PDF.py' with the path to the file
 	const pythonFile = spawn('python', ['Pull Data From Pdf.py', pathToPDF]);
 
+	// if something wonky happens let me know
 	pythonFile.on('error', err => {
 		console.log(err);
 	});
 
+	// once it's finished running
 	pythonFile.on('close', () => {
+		// run 'Compare to Query.py'
 		const comparePy = spawn('python', ['Compare To Query.py']);
 
+		// if something wonky happens let me know
 		comparePy.on('error', err => {
 			console.log('error:', err);
 		});
 
+		// if the program has an exception let me know
 		comparePy.on('uncaughtException', function(err) {
 			console.log('Caught exception: ' + err);
 		});
 
+		// once the program gives any output
 		comparePy.stdout.on('data', chunk => {
+			// format output
 			let textchunk = chunk.toString('utf8');
 
+			// send results back to browser
 			returnResults(textchunk, res);
 		});
 	});
-
-
 };
 
+// this function returns the results back to the browser
 let returnResults = function (winners, res) {
+	// split string of winners into array
 	winners = winners.split(' ');
+
+	// send back JSON of first 4 winners
 	res.send(JSON.stringify({
 		1: winners[0],
 		2: winners[1],

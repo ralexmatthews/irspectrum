@@ -34,11 +34,14 @@ document.getElementById('findButton').addEventListener('click', function () {
 	// grab ahold of the image file
 	let imageInput = input.files[0];
 
+	// show spinny wheel until finished
 	document.body.style.cursor = 'wait';
 
+	// prepare file to be sent
 	let myData = new FormData();
 	myData.append('file', imageInput);
 	
+	// fancy animations telling user whats up
 	$('#sending').fadeIn(1000, () => {
 		setTimeout(() => {
 			$('#sending').fadeOut(500, () => {
@@ -53,6 +56,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 		}, 5000);
 	});
 
+	// send file to server
 	$.ajax({
 		url: 'http://' + location.host + '/getmatch',
 		data: myData,
@@ -62,6 +66,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 		complete: function (data) {
 			let response = JSON.parse(data.responseText);
 
+			// hide all messages
 			$('#sending').hide();
 			$('#getData').hide();
 			$('#comparing').hide();
@@ -190,6 +195,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 				winner4pic.classList.remove('hidden');
 			});
 
+			// set cursor back to normal
 			document.body.style.cursor = 'default';
 		}
 	});
