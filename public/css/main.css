@@ -46,10 +46,6 @@
 	margin: 0 0 1rem 1rem;
 }
 
-body {
-	background-color: #eeffff;
-}
-
 .navbar-default {
 	background-color: #eeffff;
 }
@@ -57,8 +53,8 @@ body {
 .nav-tabs .nav-item.show .nav-link,
 .nav-tabs .nav-link.active {
 	color: #495057;
-	background-color: #eeffff;
-	border-color: #ddd #ddd #fff
+	background-color: #fff;
+	border-color: #ddd #ddd #fff;
 }
 
 body ul li a {
@@ -67,5 +63,21 @@ body ul li a {
 
 .btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
 	background-color: #444444 !important;
-	outline-color: #000000 !important;
+	border-color: #000000 !important;
+}
+
+a:hover {
+	color: #222222;
+}
+
+#header {
+	background-color: #eeffff;
+}
+
+html {
+	height: 100%;
+}
+
+body {
+	height: 100%;
 }
