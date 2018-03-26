@@ -19,26 +19,9 @@ input.onchange = function () {
 
 	let ext = imageInput.name.substring(imageInput.name.length - 3);
 
-	if (ext == 'jpg' || ext == 'pdf') {
+	if (ext == 'pdf') {
 		// create html stuff
-		let span = document.createElement('span');
-		let displayImage = document.createElement('img');
-		if (ext == 'jpg') {
-			displayImage.src = window.URL.createObjectURL(imageInput);
-		} else {
-			displayImage.src = 'http://localhost:3000/images/pdf.png';
-		}
-		displayImage.classList.add('resize');
-		span.id = 'displayPic';
 		document.getElementById('filename').innerText = input.files[0].name;
-
-		// if there is already a picture there, remove it
-		if (document.getElementById('displayPic')) {
-			document.body.removeChild(document.getElementById('displayPic'));
-		}
-
-		document.body.appendChild(span);
-		span.appendChild(displayImage);
 	}
 
 	// enable the find button once file is uploaded
@@ -51,17 +34,37 @@ document.getElementById('findButton').addEventListener('click', function () {
 	// grab ahold of the image file
 	let imageInput = input.files[0];
 
+	document.body.style.cursor = 'wait';
+
 	let myData = new FormData();
 	myData.append('file', imageInput);
+	
+	$('#sending').fadeIn(1000, () => {
+		setTimeout(() => {
+			$('#sending').fadeOut(500, () => {
+				$('#getData').fadeIn(1000, () => {
+					setTimeout(() => {
+						$('#getData').fadeOut(500, () => {
+							$('#comparing').fadeIn(1000);
+						});
+					}, 15000);
+				});
+			});
+		}, 5000);
+	});
 
 	$.ajax({
-		url: 'http://localhost:3000/getmatch',
+		url: 'http://' + location.host + '/getmatch',
 		data: myData,
 		processData: false,
 		contentType: false,
 		type: 'POST',
 		complete: function (data) {
 			let response = JSON.parse(data.responseText);
+
+			$('#sending').hide();
+			$('#getData').hide();
+			$('#comparing').hide();
 
 			// create all the html stuff we need
 			let winnersContainer = document.createElement('span');
@@ -77,7 +80,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 			let winner2button = document.createElement('span');
 			let winner3button = document.createElement('span');
 			let winner4button = document.createElement('span');
-			let winnerButtonContainer = document.createElement('span');
+			let winnerButtonContainer = document.createElement('div');
 
 			winnerButtonContainer.id = 'winnerButtonContainer';
 
@@ -104,10 +107,10 @@ document.getElementById('findButton').addEventListener('click', function () {
 			winner4button.innerText = '4. ' + response['4'];
 
 			// get the pictures from the server
-			winner1pic.src = 'http://localhost:3000/images/' + response['1'] + '.jpg';
-			winner2pic.src = 'http://localhost:3000/images/' + response['2'] + '.jpg';
-			winner3pic.src = 'http://localhost:3000/images/' + response['3'] + '.jpg';
-			winner4pic.src = 'http://localhost:3000/images/' + response['4'] + '.jpg';
+			winner1pic.src = 'http://' + location.host + '/images/' + response['1'] + '.jpg';
+			winner2pic.src = 'http://' + location.host + '/images/' + response['2'] + '.jpg';
+			winner3pic.src = 'http://' + location.host + '/images/' + response['3'] + '.jpg';
+			winner4pic.src = 'http://' + location.host + '/images/' + response['4'] + '.jpg';
 
 			// make the pictures the right size
 			winner1pic.classList = 'resize';
@@ -186,6 +189,8 @@ document.getElementById('findButton').addEventListener('click', function () {
 				winner3pic.classList.add('hidden');
 				winner4pic.classList.remove('hidden');
 			});
+
+			document.body.style.cursor = 'default';
 		}
 	});
 

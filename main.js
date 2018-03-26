@@ -61,7 +61,7 @@ app.post('/getmatch', function (req, res) {
 
 	// once its finished saving, do the business. This is where the magic comparing happens
 	form.on('end', () => {
-		runJoshsPython(filepath);
+		runJoshsPython(filepath, res);
 		// setTimeout(() => {
 		// 	// get pixels in the form pixelsArray[x][y] = [r, g, b, a]
 		// 	let pixelsArray = getArrayPixels(filepath);
@@ -162,43 +162,36 @@ let getHeightGraph = function (imageArray) {
 	return heightGraph;
 };
 
-let runJoshsPython = function (pathToPDF) {
-	console.log('here');
-	const pythonFile = spawn('python', ['Pull Data From Pdf.py', String(pathToPDF)]);
+let runJoshsPython = function (pathToPDF, res) {
+	const pythonFile = spawn('python', ['Pull Data From Pdf.py', pathToPDF]);
 
 	pythonFile.on('error', err => {
 		console.log(err);
 	});
 
 	pythonFile.on('close', () => {
-		console.log('got here');
-		const comparePy = spawn('python', ['Compare To Query.py'], {
-			stdio: [1, 'pipe']
-		});
+		const comparePy = spawn('python', ['Compare To Query.py']);
 
 		comparePy.on('error', err => {
 			console.log('error:', err);
 		});
 
-		comparePy.stdout.on('data', chunk => {
-			console.log('got here 1');
-			let textchunk = chunk.toString('utf8');
-
-			return textchunk;
+		comparePy.on('uncaughtException', function(err) {
+			console.log('Caught exception: ' + err);
 		});
 
-		comparePy.on('exit', code => {
-			console.log('exit:', code);
+		comparePy.stdout.on('data', chunk => {
+			let textchunk = chunk.toString('utf8');
+
+			returnResults(textchunk, res);
 		});
 	});
 
 
 };
 
-let returnResults = function (winners) {
-	console.log(winners);
+let returnResults = function (winners, res) {
 	winners = winners.split(' ');
-	console.log(winners);
 	res.send(JSON.stringify({
 		1: winners[0],
 		2: winners[1],

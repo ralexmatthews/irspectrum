@@ -115,3 +115,5 @@ for i in range(len(difList)):
 f.close()
 
 print(retString.strip())
+
+sys.stdout.flush()
