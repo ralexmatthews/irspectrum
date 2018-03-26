@@ -3,10 +3,11 @@ Hello all!
 
 This is the repository for our CSC450 project. This application is a node.js/express server that will take IR Spectrum readings from the user and compare those graphs to the graphs already stored in the database. 
 
-To run our application, start by downloading the repository. Then you will need another file not on GitHub due to size constraints. It can be located at https://drive.google.com/open?id=1KxAq0WA-OUHefGoLrSSyV3DG2H1yB2pu. Once values.json has been downloaded, place it in ./src/ folder. Once they have been downloaded and set up, open the shell of your choice, go to the directory of the project, and input
+To run our application, start by downloading the repository. Once it has been downloaded and set up, open the shell of your choice, go to the directory of the project, and input
 
 ```console
 npm i
+pip install -r requirements.txt
 node main.js
 ```
 
