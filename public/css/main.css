@@ -1,5 +1,5 @@
 .title {
-	margin: 0 2rem 0 2rem;
+	margin: 2rem 2rem 1rem 2rem;
 }
 
 .navigationBar {
@@ -29,4 +29,12 @@
 
 .name {
 	width: 20px;
+}
+
+#winnerButtonContainer {
+	margin: 1rem 1rem 1rem 4rem;
+}
+
+.messages {
+	margin: 3rem 0 0 5rem;
 }
