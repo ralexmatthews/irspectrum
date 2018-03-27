@@ -1,5 +1,6 @@
 .idea/
 node_modules/
 values.json
-temp/
 __pycache__/
+temp/*
+!temp/.gitkeep
