@@ -88,6 +88,7 @@ let runJoshsPython = function (pathToPDF, res) {
 	// once it's finished running
 	pythonFile.on('close', () => {
 		// run 'Compare to Query.py'
+		console.log(pathToQuery);
 		const comparePy = spawn('python', ['Compare To Query.py',pathToQuery]);
 
 		// if something wonky happens let me know
