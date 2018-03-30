@@ -1,2 +1,7 @@
+<<<<<<< HEAD
 [Errno 2] No such file or directory: 'data\\Query1.pdf.peak'
 54
+=======
+[Errno 2] No such file or directory: 'query\\Query.pdf.peak'
+55
+>>>>>>> 69ddff40bbd7b08385ddc5ff5dc39fb3dd9f6dd2

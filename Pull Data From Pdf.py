@@ -20,7 +20,6 @@ Debug=False
 
 if len(sys.argv)==1:
     filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
-    filedir+=[os.path.join("query",file) for file in os.listdir("query") if file==("Query.pdf")]
 else:
     filedir=[sys.argv[1]]
     if "-query" in sys.argv[2:]: Query=True
