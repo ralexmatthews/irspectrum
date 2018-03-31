@@ -4,6 +4,8 @@ as an argument, it will save the image in the same directory you are in.
 """
 import PyPDF2
 
+import time
+
 import sys
 import warnings
 import os
@@ -13,11 +15,15 @@ from math import log
 
 from IR_Functions import PullImages
 
+Query=False
+Debug=False
+
 if len(sys.argv)==1:
     filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
-    filedir+=[os.path.join("query",file) for file in os.listdir("query") if file==("Query.pdf")]
 else:
     filedir=[sys.argv[1]]
+    if "-query" in sys.argv[2:]: Query=True
+    if "-debug" in sys.argv[2:]: Debug=True
 
 for file in filedir:
 
@@ -25,8 +31,12 @@ for file in filedir:
         fname=file.split("\\")[-1]
     else:
         fname=file.split("/")[-1]
+
+    if Query:
+        dest=os.path.join("query",str(int(time.time())) )
+    else:
+        dest=os.path.join("data",fname)
         
-    dest=os.path.join("data",fname)
     
     images = PullImages(file)
     
@@ -214,13 +224,6 @@ for file in filedir:
     transformDict["absD"]=slopeSum(absD(data))
     transformDict["basic"]=slopeSum( [(e[0],e[2]) for e in data])
 
-    graph=[]#image for the graph
-
-    #fill graph with a blank white image of size Width x Height
-    for x in range(Width):
-        for y in range(Height):
-            graph+=[(255,255,255)]
-
     #function to draw pixels
     def drawPix(x,y,c):
         graph[int(y*Width+x)]=c
@@ -230,20 +233,6 @@ for file in filedir:
         return round((x-xMin)/xRange*Width)
     def deverty(y):
         return round((y-yMin)/yRange*Height)
-
-    for i in range(len(data)):#draw lines in graph from data
-        
-        datapoint=data[i]
-        #calculate the x,y of the origional IR graph from data
-        if datapoint:
-            x=devertx(datapoint[0])
-            for y in range(deverty(datapoint[2]),deverty(datapoint[1])):
-                graph[int(y*Width+x)]=(0,0,0)#draw points in graph at x
-
-        #draw each of the transformations on to the graph
-        drawPix(devertx(transformDict["peak"][i][0]), deverty(transformDict["peak"][i][1]/transformDict["peak"][-1][1]),(255,0,0))
-        drawPix(devertx(transformDict["absD"][i][0]), deverty(transformDict["absD"][i][1]/transformDict["absD"][-1][1]),(0,0,255))
-        drawPix(devertx(transformDict["basic"][i][0]), deverty(transformDict["basic"][i][1]/transformDict["basic"][-1][1]),(0,255,0))
 
     #save each transformation to file
     for k in transformDict:
@@ -255,9 +244,34 @@ for file in filedir:
             for element in d:
                 f.write(str(element) + '\n')
             f.close()
+    
+    if Debug:    
+        graph=[]#image for the graph
 
-    #save graph with transformations
-    img = Image.new('RGB', (Width, Height))
-    img.putdata(graph)
-    img.save(dest+'.transform.png')
+        #fill graph with a blank white image of size Width x Height
+        for x in range(Width):
+            for y in range(Height):
+                graph+=[(255,255,255)]
 
+        for i in range(len(data)):#draw lines in graph from data
+            
+            datapoint=data[i]
+            #calculate the x,y of the origional IR graph from data
+            if datapoint:
+                x=devertx(datapoint[0])
+                for y in range(deverty(datapoint[2]),deverty(datapoint[1])):
+                    graph[int(y*Width+x)]=(0,0,0)#draw points in graph at x
+
+            #draw each of the transformations on to the graph
+            drawPix(devertx(transformDict["peak"][i][0]), deverty(transformDict["peak"][i][1]/transformDict["peak"][-1][1]),(255,0,0))
+            drawPix(devertx(transformDict["absD"][i][0]), deverty(transformDict["absD"][i][1]/transformDict["absD"][-1][1]),(0,0,255))
+            drawPix(devertx(transformDict["basic"][i][0]), deverty(transformDict["basic"][i][1]/transformDict["basic"][-1][1]),(0,255,0))
+
+        #save graph with transformations
+        img = Image.new('RGB', (Width, Height))
+        img.putdata(graph)
+        img.save(dest+'.transform.png')
+
+print(dest)
+
+sys.stdout.flush()
