@@ -7,6 +7,7 @@ import PyPDF2
 import time
 
 import sys
+import sqlite3
 import warnings
 import os
 from os import path
@@ -15,35 +16,30 @@ from math import log
 
 from IR_Functions import PullImages
 
-Query=False
-Debug=False
-
-"""if len(sys.argv)==1:
-    filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith("Query1.pdf")]
-else:
-    filedir=[sys.argv[1]]
-    if "-query" in sys.argv[2:]: Query=True
-    if "-debug" in sys.argv[2:]: Debug=True
-
-for file in filedir:
-    if "\\" in file:
-        fname=file.split("\\")[-1]
-    else:
-        fname=file.split("/")[-1]
-
-    if Query:
-        dest=os.path.join("query",str(int(time.time())) )
-    else:
-        dest=os.path.join("data",fname)"""
-
+path = "C:\\Users\\Josh\\Desktop\\Programming\\CSC 450\\irspectrum\\temp\\55-21-0.pdf"
 dest=os.path.join("data", "Query")
+""" Open the source image """
 images = PullImages(sys.argv[1])
+#images = PullImages(path)
 
-'''
-Open the source image
-Crop the image
-'''
+addToDB = False
 
+fname = sys.argv[1].split("\\")[-1]
+#fname = path.split("\\")[-1]
+fname = fname.split(".")[0]
+
+""" is this file already in the database? """
+conn = sqlite3.connect(os.path.realpath("IR.db"))
+sqlQ = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+fname+"'"
+cur = conn.cursor()
+cur.execute(sqlQ)
+qData = cur.fetchall()
+
+""" if not in the database set the flag to add it """
+if len(qData)==0:
+    addToDB = True
+    
+""" Crop the image """
 img = Image.open(images[0])
 imgdata=list(img.getdata())#the pixels from the image
 
@@ -128,9 +124,17 @@ for x in range(len(graphData)):
 
 #save data
 f = open(dest+".data", "w")
+sqlQ = "INSERT INTO IR_Raw(CAS_Num, Wavelength, x_min, x_max) VALUES (?, ?, ?, ?)"
+
 for element in data:
+    if addToDB:
+        dbvalues = (fname, element[0], element[1], element[2])
+        cur = conn.cursor()
+        cur.execute(sqlQ, dbvalues)
     f.write(str(element[0])+","+str(element[1])+","+str(element[2])+'\n')
 f.close()
+if addToDB:
+    conn.commit()
 
 #Height and Width of the part of the graph containing data
 Width=866
@@ -233,17 +237,24 @@ def devertx(x):
 def deverty(y):
     return round((y-yMin)/yRange*Height)
 
+sqlQ = "INSERT INTO IR_JoshEllisAlgorithm(CAS_Num, Type, Wavelength, Value) VALUES (?, ?, ?, ?)"
 #save each transformation to file
 for k in transformDict:
     d=[]
     for each in transformDict[k]:
         d+=[str(each[0])+','+str(each[1])]
+        if addToDB: # add stuff to DB if doesn't exist
+            dbvalues = (fname, k, each[0], each[1])
+            cur = conn.cursor()
+            cur.execute(sqlQ, dbvalues)
         #save data
         f = open(dest+"."+k, "w")
         for element in d:
             f.write(str(element) + '\n')
         f.close()
-
+if addToDB:
+    conn.commit()
+    addToDB = False
 print(dest)
 
 sys.stdout.flush()
