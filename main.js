@@ -89,7 +89,7 @@ let runJoshsPython = function (pathToPDF, res) {
 	// once it's finished running
 	pythonFile.on('close', () => {
 		// run 'Compare to Query.py'
-		const comparePy = spawn('python', ['CompareQueryToDB.py',pathToQuery]);
+		const comparePy = spawn('python', ['IRSpectrum.py',pathToQuery,"-query"]);
 
 		// if something wonky happens let me know
 		comparePy.on('error', err => {
