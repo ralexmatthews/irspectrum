@@ -71,7 +71,7 @@ const server = app.listen(3000, function () {
 // this function runs the python programs
 let runJoshsPython = function (pathToPDF, res) {
 	// run 'Pull Data From PDF.py' with the path to the file
-	const pythonFile = spawn('python', ['IRSpectrum.py', pathToPDF,"-query"]);
+	const pythonFile = spawn('python', ['FormatPDFData.py', pathToPDF,"-query"]);
 
 	// if something wonky happens let me know
 	pythonFile.on('error', err => {
@@ -89,7 +89,7 @@ let runJoshsPython = function (pathToPDF, res) {
 	// once it's finished running
 	pythonFile.on('close', () => {
 		// run 'Compare to Query.py'
-		const comparePy = spawn('python', ['IRSpectrum.py',pathToQuery,"-query"]);
+		const comparePy = spawn('python', ['CompareQueryToDB.py',pathToQuery,"-query"]);
 
 		// if something wonky happens let me know
 		comparePy.on('error', err => {
