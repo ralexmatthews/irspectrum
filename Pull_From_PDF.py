@@ -14,7 +14,7 @@ from os import path
 from PIL import Image, ImageTk
 from math import log
 
-from IR_Functions import PullImages
+from IR_Functions import *
 
 path = "C:\\Users\\Josh\\Desktop\\Programming\\CSC 450\\irspectrum\\temp\\55-21-0.pdf"
 dest=os.path.join("data", "Query")
@@ -140,92 +140,11 @@ if addToDB:
 Width=866
 Height=696
 
-def slopeSum(l):
-    '''
-    A new curve is created where element n is the sum of the first n terms in list l
-     divided by the sum of all terms in l
-    '''
-
-    #for each point, add its value to all previous values in l
-    retlist=[(0,0)]
-    for point in l:
-        retlist+=[(point[0],retlist[-1][1]+point[1])]
-    retlist.pop(0)
-
-    #normalize the new list by dividing each point by the last value
-    for i in range(len(retlist)):
-        retlist[i]=(retlist[i][0],retlist[i][1]/retlist[-1][1])
-
-    #the returned list will have a range from 0 to 1
-    return retlist
-
-'''
-The next two functions are attempts to transform the data in an IR graph
- into a more useful form. The "Transformations" are ment to be easily compared
- for two differnet compounds
-'''
-
-def peak(l):#peak to peak transformation
-    '''
-    Find all peaks in list l
-    Weight peaks by their height and how far they are from other taller peaks
-    '''
-    retlist=[]
-    lenl=len(l)
-    for i in range(lenl):
-
-        #current x and y values for point i in list l
-        curx=l[i][0]
-        cury=l[i][2]
-
-        #If this point has the same y value as the previous point
-        # then continue to the next point
-        if i-1>=0: # and i+1<lenl
-            if (l[i-1][2] == cury):
-                retlist+=[(curx,0)]
-                continue
-
-        #Search right of the point until you run into another peak or off the graph
-        # sum the difference between cury and the graph at i+j to find the area right of the peak
-        
-        s1=0
-        j=1
-        while i+j<lenl and l[i+j][2] <= cury and j<11:
-            s1+= (cury - l[i+j][2]) * (l[i+j][0]-l[i+j-1][0])
-            j+=1
-
-        #Same opperation but searching left
-        s2=0
-        j=-1
-        while i+j>=0 and l[i+j][2] <= cury and j>-11:
-            s2+= (cury - l[i+j][2]) * (l[i+j+1][0]-l[i+j][0])
-            j-=1
-
-        #take the lowest of the 2 values
-        #Note: log may not be useful. It was added to decrease the weight of tall peaks
-        if min(s1,s2)>0:
-            retlist+=[(curx,log(min(s1,s2)*cury+1,2))]
-        else:#white 0 to new curve if the point was not a peak
-            retlist+=[(curx,0)]
-                
-    return retlist
-
-def absD(l):#Transformation based on slope
-    '''
-    The absolute value of the slope of the curve in list l
-    Note: this method may not be useful for matching compounds
-    '''
-    retlist=[]
-    for i in range(len(l)):
-        retlist+=[(l[i][0],l[i][2]-l[i][1])]
-                
-    return retlist
-
 #calculate each transformation
 transformDict={}
-transformDict["peak"]=slopeSum(peak(data))
 transformDict["absD"]=slopeSum(absD(data))
 transformDict["basic"]=slopeSum( [(e[0],e[2]) for e in data])
+transformDict["peak"]=peak(data)
 
 #function to draw pixels
 def drawPix(x,y,c):

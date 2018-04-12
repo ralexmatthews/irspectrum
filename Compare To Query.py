@@ -5,6 +5,9 @@ from os import path
 from PIL import Image, ImageTk
 from math import log
 
+import time as T
+
+from IR_Functions import *
 
 #size of graph images
 Width=866
@@ -16,12 +19,12 @@ filedir=[file for file in os.listdir("IR samples") if file.endswith(".pdf") and 
 #list of total diffence for each compound
 difList=[]
 
-#only compare by peak for now
-tranformTypes={"peak": (255,0,0), "basic": (0,255,0),"absD":(0,0,255)}
-#tranformTypes={"peak": (255,0,0), "basic": (0,255,0)}
-#tranformTypes={"absD":(0,0,255)}
-#tranformTypes={"peak": (255,0,0)}
-#tranformTypes={"basic": (0,255,0)}
+tranformTypes=["peak","basic","absD"]
+#tranformTypes=["basic","absD"]
+#tranformTypes=["basic"]
+#tranformTypes=["peak"]
+#tranformTypes=["absD"]
+
 
 ## used to grab the total number of molecules
 conn = sqlite3.connect(os.path.realpath("IR.db"))
@@ -31,10 +34,15 @@ cur.execute(sqlQ)
 qData = cur.fetchall()
 #############
 
-for i in range(len(qData)):
+#print(qData)
 
-    difference=0
-    for tType in tranformTypes:
+startTime = T.time()
+
+difDict={}
+for tType in tranformTypes:
+    difDict[tType]=[]
+    for i in range(len(qData)):
+    
         sqlQ = "SELECT Wavelength, Value FROM IR_JoshEllisAlgorithm WHERE CAS_Num=? AND Type=?"
         cur = conn.cursor()
         cur.execute(sqlQ, (qData[i][0], tType))
@@ -60,61 +68,58 @@ for i in range(len(qData)):
         lines=f.readlines()
         transformation2=[str2Tuple(s.strip()) for s in lines]
         #print(transformation1)
-        """
-        #numbers used to convert from graph x,y to scientific x,y
-        yMin=1.02
-        yMax=-0.05
-        yRange=yMax-yMin
-        xMin=200
-        xMax=4100
-        xRange=xMax-xMin
-    
-        def devertx(x):
-            return round((x-xMin)/xRange*Width)
-        def deverty(y):
-            return round((y-yMin)/yRange*Height)
-
-        graph=[]
-        #create graph as black blank image
-        for x in range(Width):
-            for y in range(Height):
-                graph+=[(0,0,0)]
-
-        #draw a pixel
-        def addPix(x,y,c):
-            r,g,b=c
-            oR,oG,oB = graph[int(y*Width+x)]
-            graph[int(y*Width+x)]=min(255,r+oR),min(255,g+oG),min(255,b+oB)
-        """
-        dif=0
+   
         #total the differences between the compound and the query
         # also draw an image to show this comparison
-        for a in range(min(len(transformation1),len(transformation2))):
-            dif+=abs(transformation1[a][1]-transformation2[a][1])
-        '''
-        f = open("output\\"+file1.split(".")[0]+tType+'.comp.txt', "w")
-        f.write(file1+" x "+file2 + '\n')
-        f.write("difference = "+ str(dif) + '\n')
-        f.close()
-        '''
+        dif=compare(tType,transformation1,transformation2)
+                        
+        #                 dif    casNum
+        difDict[tType]+=[(dif,qData[i][0])]
 
-        difference+=dif
+def quality(dif):
+    return 999-dif
 
-    difList+=[(difference,i)]
+for trform in tranformTypes:
+    difDict[trform].sort()
+difList=[]
 
-#sort compounds by difference
-difList.sort()
+bestDict={}
+for i in range(len(qData)):#casNum
+    bestDict[qData[i][0]]=[]
 
+for i in range(len(qData)):
+    tempList=[]
+    for trform in tranformTypes:
+        if bestDict[difDict[trform][i][1]]!="Done":
+            bestDict[difDict[trform][i][1]]+=[difDict[trform][i][0]]
+    for casNum in list(bestDict.keys()):
+        if bestDict[casNum]!="Done":
+            if len(bestDict[casNum])>=max(1,len(tranformTypes)-1):
+                n=0
+                for each in bestDict[casNum]:
+                    n=max(n,each)
+                tempList+=[(n,casNum)]
+                bestDict[casNum]="Done"
+    if tempList:
+        tempList.sort()
+        difList+=tempList
+            
 retString=""
 
 #save list of compound differences to file
-f = open(os.path.join("output",'Ranked Differences.txt'), "w")
+#f = open(os.path.join("output",'Ranked Differences.txt'), "w")
 for i in range(len(difList)):
-    f.write('#'+str(i+1)+': '+qData[difList[i][1]][0]+'.pdf\n')
-    retString+=qData[difList[i][1]][0]+" "
-    f.write("difference = "+ str(difList[i][0]) + '\n\n')
-f.close()
+    #f.write('#'+str(i+1)+': '+qData[difList[i][1]][0]+'.pdf\n')
+    
+    #retString+=difList[i][1]+" "+str(difList[i][0])+"\n"
+    retString+=difList[i][1]+" "
+    
+    #f.write("difference = "+ str(difList[i][0]) + '\n\n')
+#f.close()
 
 print(retString.strip())
+
+#print("Done in",T.time()-startTime)
+#print(tranformTypes)
 
 sys.stdout.flush()
