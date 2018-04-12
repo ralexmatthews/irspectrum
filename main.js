@@ -70,45 +70,26 @@ const server = app.listen(3000, function () {
 
 // this function runs the python programs
 let runJoshsPython = function (pathToPDF, res) {
-	// run 'Pull Data From PDF.py' with the path to the file
-	const pythonFile = spawn('python', ['Query.py', pathToPDF,"-query"]);
+	// run 'Compare to Query.py'
+	const comparePy = spawn('python', ['Query.py',pathToPDF]);
 
 	// if something wonky happens let me know
-	pythonFile.on('error', err => {
-		console.log(err);
+	comparePy.on('error', err => {
+		console.log('error:', err);
 	});
 
-	let pathToQuery="";
+	// if the program has an exception let me know
+	comparePy.on('uncaughtException', function(err) {
+		console.log('Caught exception: ' + err);
+	});
+
 	// once the program gives any output
-	pythonFile.stdout.on('data', chunk => {
+	comparePy.stdout.on('data', chunk => {
 		// format output
-		pathToQuery = chunk.toString('utf8');
+		let textchunk = chunk.toString('utf8');
 
-	});
-
-	// once it's finished running
-	pythonFile.on('close', () => {
-		// run 'Compare to Query.py'
-		const comparePy = spawn('python', ['Query.py',pathToPDF,"-query"]);
-
-		// if something wonky happens let me know
-		comparePy.on('error', err => {
-			console.log('error:', err);
-		});
-
-		// if the program has an exception let me know
-		comparePy.on('uncaughtException', function(err) {
-			console.log('Caught exception: ' + err);
-		});
-
-		// once the program gives any output
-		comparePy.stdout.on('data', chunk => {
-			// format output
-			let textchunk = chunk.toString('utf8');
-
-			// send results back to browser
-			returnResults(textchunk, res);
-		});
+		// send results back to browser
+		returnResults(textchunk, res);
 	});
 };
 
