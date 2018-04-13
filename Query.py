@@ -191,11 +191,11 @@ def absD(l):#Transformation based on slope
     return retlist
 
 def str2Tuple(s):#convert strings to 2 element tuples (float,float)
-    if s=='None':
+    if (s=='None'):
         return None
-
-    x,y =s.split(',')
-    return ( float(x) , float(y) )
+    else:
+        x,y =s.split(',')
+        return (float(x) , float(y))
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
@@ -205,33 +205,20 @@ def formatQueryData(queryData):
     fname = queryData.split("\\")[-1]
     fname = fname.split(".")[0]
 
-    """ is this file already in the database? """
-    addToDB = False #TODO Will delete this later.
-    dest=os.path.join("data", "Query")
-    conn = sqlite3.connect(os.path.realpath("IR.db"))
-    sqlQ = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+fname+"'"
-    cur = conn.cursor()
-    cur.execute(sqlQ)
-    qData = cur.fetchall()
-
-    """ if not in the database set the flag to add it """
-    if len(qData)==0:
-        addToDB = True
-
     """ Crop the image """
     img = Image.open(images[0])
     imgdata=list(img.getdata())#the pixels from the image
 
+    #the graph cut out of the larger image
     global targetRect
+    global graph
+    graph=cropRect(imgdata,targetRect)
+
     #width and height of out cropped graph
     global Width
     Width = targetRect[1]-targetRect[0]+1
     global Height
     Height = targetRect[3]-targetRect[2]+1
-
-    #the graph cut out of the larger image
-    global graph
-    graph=cropRect(imgdata,targetRect)
 
     #Draws a graph of each (x, y) point found in the image.
     graphData = drawGraph()
@@ -239,55 +226,31 @@ def formatQueryData(queryData):
     #Converts graph to the final values that will be stored in the DB.
     data = convertToData(graphData)
 
-    #save data
-    f = open(dest+".data", "w")
-    sqlQ = "INSERT INTO IR_Raw(CAS_Num, Wavelength, x_min, x_max) VALUES (?, ?, ?, ?)"
-
-    for element in data:
-        if addToDB:
-            dbvalues = (fname, element[0], element[1], element[2])
-            cur = conn.cursor()
-            cur.execute(sqlQ, dbvalues)
-        f.write(str(element[0])+","+str(element[1])+","+str(element[2])+'\n')
-    f.close()
-    if addToDB:
-        conn.commit()
-
     #calculate each transformation
     transformDict={}
-    transformDict["peak"]=slopeSum(peak(data))
+    #transformDict["peak"]=slopeSum(peak(data))
     transformDict["absD"]=slopeSum(absD(data))
-    transformDict["basic"]=slopeSum( [(e[0],e[2]) for e in data])
+    #transformDict["basic"]=slopeSum( [(e[0],e[2]) for e in data])
 
-    sqlQ = "INSERT INTO IR_JoshEllisAlgorithm(CAS_Num, Type, Wavelength, Value) VALUES (?, ?, ?, ?)"
+    #sqlQ = "INSERT INTO IR_JoshEllisAlgorithm(CAS_Num, Type, Wavelength, Value) VALUES (?, ?, ?, ?)"
     #save each transformation to file
+    formatedQueryData=[]
     for k in transformDict:
-        d=[]
         for each in transformDict[k]:
-            d+=[str(each[0])+','+str(each[1])]
-            if addToDB: # add stuff to DB if doesn't exist
-                dbvalues = (fname, k, each[0], each[1])
-                cur = conn.cursor()
-                cur.execute(sqlQ, dbvalues)
-            #save data
-            f = open(dest+"."+k, "w")
-            for element in d:
-                f.write(str(element) + '\n')
-            f.close()
-    if addToDB:
-        conn.commit()
-        addToDB = False
+            formatedQueryData.append((each[0], each[1]))
+
+    return formatedQueryData
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-def compareQueryToDB():
+def compareQueryToDB(formatedQueryData):
     #list of total diffence for each compound
     difList=[]
 
     #only compare by peak for now
-    tranformTypes={"peak": (255,0,0), "basic": (0,255,0),"absD":(0,0,255)}
+    #tranformTypes={"peak": (255,0,0), "basic": (0,255,0),"absD":(0,0,255)}
     #tranformTypes={"peak": (255,0,0), "basic": (0,255,0)}
-    #tranformTypes={"absD":(0,0,255)}
+    tranformTypes={"absD":(0,0,255)}
     #tranformTypes={"peak": (255,0,0)}
     #tranformTypes={"basic": (0,255,0)}
 
@@ -297,7 +260,6 @@ def compareQueryToDB():
     cur = conn.cursor()
     cur.execute(sqlQ)
     qData = cur.fetchall()
-    #############
 
     for i in range(len(qData)):
 
@@ -308,19 +270,11 @@ def compareQueryToDB():
             cur.execute(sqlQ, (qData[i][0], tType))
             transformation1 = cur.fetchall()
 
-            file2="Query."+tType
-
-            #TODO Do we still need this code?
-            #read data for the query
-            f = open(os.path.join("data",file2), "r")
-            lines=f.readlines()
-            transformation2=[str2Tuple(s.strip()) for s in lines]
-
             dif=0
             #total the differences between the compound and the query
             # also draw an image to show this comparison
-            for a in range(min(len(transformation1),len(transformation2))):
-                dif+=abs(transformation1[a][1]-transformation2[a][1])
+            for a in range(min(len(transformation1),len(formatedQueryData))):
+                dif+=abs(transformation1[a][1]-formatedQueryData[a][1])
 
             difference+=dif
 
@@ -347,74 +301,7 @@ def compareQueryToDB():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-formatQueryData(sys.argv[1])
+formatedQueryData = formatQueryData(sys.argv[1])
 
-compareQueryToDB()
+compareQueryToDB(formatedQueryData)
 #---------------------------------End of Program-------------------------------
-
-#---------------------------------Deprecated Code------------------------------
-"""
-path = "C:\\Users\\Josh\\Desktop\\Programming\\CSC 450\\irspectrum\\temp\\55-21-0.pdf"
-#images = PullImages(path)
-#fname = path.split("\\")[-1]
-"""
-"""
-#TODO The drawPix, devertx, and deverty functions appear to no longer be used
-#function to draw pixels
-def drawPix(x,y,c):
-    graph[int(y*Width+x)]=c
-
-#convert graph x,y into scientific x,y
-def devertx(x):
-    global xMin
-    global xRange
-    return round((x-xMin)/xRange*Width)
-def deverty(y):
-    global yMin
-    global yRange
-    return round((y-yMin)/yRange*Height)
-"""
-#print(transformation1)
-#size of graph images
-#Width=866
-#Height=696
-"""
-#numbers used to convert from graph x,y to scientific x,y
-yMin=1.02
-yMax=-0.05
-yRange=yMax-yMin
-xMin=200
-xMax=4100
-xRange=xMax-xMin
-
-def devertx(x):
-    return round((x-xMin)/xRange*Width)
-def deverty(y):
-    return round((y-yMin)/yRange*Height)
-
-graph=[]
-#create graph as black blank image
-for x in range(Width):
-    for y in range(Height):
-        graph+=[(0,0,0)]
-
-#draw a pixel
-def addPix(x,y,c):
-    r,g,b=c
-    oR,oG,oB = graph[int(y*Width+x)]
-    graph[int(y*Width+x)]=min(255,r+oR),min(255,g+oG),min(255,b+oB)
-"""
-#read data for the compound
-"""f = open(os.path.join("data",file1), "r")
-lines=f.readlines()
-transformation1=[str2Tuple(s.strip()) for s in lines]"""
-'''
-f = open("output\\"+file1.split(".")[0]+tType+'.comp.txt', "w")
-f.write(file1+" x "+file2 + '\n')
-f.write("difference = "+ str(dif) + '\n')
-f.close()
-'''
-#TODO delete these three lines if filedir is never used.
-#list of all compounds
-#filedir=[file for file in os.listdir("IR samples") if file.endswith(".pdf") and file!="Query1.pdf"]
-#------------------------------------------------------------------------------
