@@ -1,27 +1,33 @@
-import PyPDF2
+"""
 
+"""
+#---------------------------------Imports--------------------------------------
+import PyPDF2
 import sys
 import warnings
 import os
 from os import path
-
 warnings.filterwarnings("ignore")
+#------------------------------------------------------------------------------
 
+#---------------------------------Variables------------------------------------
+#global variables go here
 number = 0
+#------------------------------------------------------------------------------
 
+#---------------------------------Classes/Functions----------------------------
 def PullImages(filename):
 
     '''
     Pull graph images from PDF's
     '''
-    
     def recurse(page, xObject):
         global number
 
         xObject = xObject['/Resources']['/XObject'].getObject()
 
         images=[]
-        
+
         for obj in xObject:
 
             if xObject[obj]['/Subtype'] == '/Image':
@@ -55,19 +61,18 @@ def PullImages(filename):
                 recurse(page, xObject[obj])
         return images
 
-
     try:
         abspath = path.abspath(filename)
     except BaseException:
         print('Usage :\nPDF_extract_images file.pdf page1 page2 page3 …')
         sys.exit()
 
-
     f = PyPDF2.PdfFileReader(open(filename, "rb"))
 
     page0 = f.getPage(0)
-
     p = 1
+
     images=recurse(p, page0)
 
     return images
+#------------------------------------------------------------------------------
