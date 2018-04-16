@@ -190,6 +190,7 @@ def formatQueryData(queryPath):
     """ Crop the image """
     img = Image.open(images[0])
     imgdata=list(img.getdata())#the pixels from the image
+    os.remove(images[0])
 
     #the graph cut out of the larger image
     global targetRect
@@ -263,11 +264,10 @@ def compareQueryToDB(formatedQueryData):
 
     #sort compounds by difference
     results=AddSortResults(difDict,[a[0] for a in qData])[:200]
-    
     retString=""
-
+    
     #save list of compound differences to file
-    for i in range(len(qData)):
+    for i in range(len(results)):
         retString+=results[i][1]+" "
 
     #Gives sorted list of Output to main.js
