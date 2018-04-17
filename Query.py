@@ -115,12 +115,12 @@ def converty(y):
 #------------------------------------------------------------------------------
 
 #----------------------------Multiprocessing functions-------------------------
-def work(DataQ,ReturnQ,query,tranformTypes):
+def work(DataQ,ReturnQ,query,transformTypes):
     try:
         casNum,dataDict = DataQ.get()
         
         difDict={}
-        for tType in tranformTypes:
+        for tType in transformTypes:
             difDict[tType]=[]
 
             #total the differences between the compound and the query
@@ -139,42 +139,12 @@ def work(DataQ,ReturnQ,query,tranformTypes):
         #'''
         return False
 
-def readDB(Jobs,DataQ,tranformTypes,conn):
-    casNum = Jobs.get()
-    for tType in tranformTypes:
-        dataDict={}
-        for tType in tranformTypes:
-            dataDict[tType]=[]
-            
-            sqlQ = "SELECT Wavelength, Value FROM IR_JoshEllisAlgorithm WHERE CAS_Num=? AND Type=?"
-            cur = conn.cursor()
-            cur.execute(sqlQ, (casNum, tType))
-            transformation = cur.fetchall()
-
-            dataDict[tType]=transformation
-        DataQ.put((casNum,dataDict))
-
-def worker(Jobs,workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,ReadRequestQ,query,tranformTypes):
-    #Startup
-    reader=False
-    if workerNo in range(8):
-        conn = sqlite3.connect(os.path.realpath("IR.db"))
-        reader=True
-        for i in range(1):
-            readReq=ReadRequestQ.get()
-            if readReq:
-                readDB(Jobs,DataQ,tranformTypes,conn)
+def worker(workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,query,transformTypes):
     #Worker loop
     working=True
     while working:
-        if reader:
-            readReq=ReadRequestQ.get()
-            if readReq:
-                readDB(Jobs,DataQ,tranformTypes,conn)
-            else:
-                reader=False
         jobNo=JobsDoneQ.get()
-        message=work(DataQ,ReturnQ,query,tranformTypes)
+        message=work(DataQ,ReturnQ,query,transformTypes)
         if NofJobs-jobNo<=NofWorkers-1:
             working=False
 
@@ -184,35 +154,17 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,ReadRequestQ
 def formatQueryData(queryPath):
     """ Open the source image """
     images = PullImages(queryPath)
+    
     fname = queryPath.split("\\")[-1]
     fname = fname.split(".")[0]
 
-    """ Crop the image """
-    img = Image.open(images[0])
-    imgdata=list(img.getdata())#the pixels from the image
+    data=ReadGraph(images[0])
     os.remove(images[0])
-
-    #the graph cut out of the larger image
-    global targetRect
-    global graph
-    graph=cropRect(imgdata,targetRect)
-
-    #width and height of out cropped graph
-    global Width
-    Width = targetRect[1]-targetRect[0]+1
-    global Height
-    Height = targetRect[3]-targetRect[2]+1
-
-    #Draws a graph of each (x, y) point found in the image.
-    graphData = drawGraph()
-
-    #Converts graph to the final values that will be stored in the DB.
-    data = convertToData(graphData)
+    os.remove(queryPath)
 
     #calculate each transformation
     transformDict={}
     transformDict["cumulative"]=Cumulative([(e[0],e[2]) for e in data])
-
 
     return transformDict
 #------------------------------------------------------------------------------
@@ -220,7 +172,7 @@ def formatQueryData(queryPath):
 #------------------------------------------------------------------------------
 def compareQueryToDB(formatedQueryData):
     #only compare by cumulative for now
-    tranformTypes=["cumulative"]
+    transformTypes=["cumulative"]
 
     ## used to grab the total number of molecules
     conn = sqlite3.connect(os.path.realpath("IR.db"))
@@ -229,35 +181,52 @@ def compareQueryToDB(formatedQueryData):
     cur.execute(sqlQ)
     qData = cur.fetchall()
 
+    sqlQ = "SELECT CAS_Num,Type,Wavelength,Value FROM IR_JoshEllisAlgorithm"
+    cur = conn.cursor()
+    cur.execute(sqlQ)
+    data = cur.fetchall()
+
+    dataDict={}
+    
+    for i in range(len(qData)):
+        dataDict[qData[i][0]]={}
+        for tType in transformTypes:
+            dataDict[qData[i][0]][tType]=[]
+    for i in range(len(data)):
+        dataDict[data[i][0]][data[i][1]]+=[data[i][2:]]
+    
     difDict={}
     for tType in formatedQueryData:
         difDict[tType]=[]
-
+    
     CORES = mp.cpu_count()
-    Jobs=mp.Queue()
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
-    DataQ=mp.Queue()
     ReadRequestQ=mp.Queue()
+    DataQ=mp.Queue()
+    DataBuffer=CORES*2
     for i in range(len(qData)):
-        Jobs.put(qData[i][0])
         JobsDoneQ.put(i+1)
         ReadRequestQ.put(1)
-    for i in range(CORES):
-        ReadRequestQ.put(False)
+    for i in range(DataBuffer):
+        DataQ.put((qData[i][0],dataDict[qData[i][0]]))
+        ReadRequestQ.get()
+        ReadRequestQ.put(0)
     
     p={}
     for i in range(CORES):
         p[i] = mp.Process(target = worker,\
-            args=[Jobs,i,JobsDoneQ,len(qData),CORES,ReturnQ,DataQ,ReadRequestQ\
-                  ,formatedQueryData,tranformTypes])
+            args=[i,JobsDoneQ,len(qData),CORES,ReturnQ,DataQ\
+                  ,formatedQueryData,transformTypes])
         p[i].start()
 
     #Read returned data from workers, add new read reqests
-    for numRead in range(1,len(qData)+1):
+    for i in range(DataBuffer,len(qData)+DataBuffer):
         retDict = ReturnQ.get()
-        for tType in tranformTypes:
+        for tType in transformTypes:
             difDict[tType]+=retDict[tType]
+        if ReadRequestQ.get():
+            DataQ.put((qData[i][0],dataDict[qData[i][0]]))
 
     for i in range(CORES):
         p[i].join()
@@ -272,7 +241,7 @@ def compareQueryToDB(formatedQueryData):
 
     #Gives sorted list of Output to main.js
     print(retString.strip())
-
+          
     sys.stdout.flush()
 #------------------------------------------------------------------------------
 
