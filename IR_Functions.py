@@ -14,19 +14,10 @@ warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
 
 #---------------------------------Variables------------------------------------
-#global variables go here
 number = 0
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
-
-def str2Tuple(s):#convert strings to 2 element tuples (float,float)
-    if (s=='None'):
-        return None
-    else:
-        x,y =s.split(',')
-        return tuple(map(float,[x,y]))
-
 def PullImages(filename):
 
     '''
@@ -87,7 +78,31 @@ def PullImages(filename):
 
     return images
 
+#TODO Should we break this function into smaller parts?
 def ReadGraph(image):
+    #copies pixels from the source image within the targetRect
+    def cropRect(source,rect):
+        left,right,top,bottom=rect
+        newImg=[]
+        for y in range(top,bottom+1):
+            for x in range(left,right+1):
+                newImg+=[source[y*Width+x]]
+        return newImg
+
+    #checks if the pixel at x,y is black
+    def pix(x,y):
+        r,g,b=graph[y*Width+x]
+        if r+g+b>=100:
+            return False#not black
+        else:
+            return True#black
+
+    #convert graph x,y into scientific x,y
+    def convertx(x):
+        return xMin+xRange*(x/Width)
+    def converty(y):
+        return yMin+yRange*(y/Height)
+
     """ Crop the image """
     img = Image.open(image)
     imgdata=list(img.getdata())#the pixels from the image
@@ -99,14 +114,13 @@ def ReadGraph(image):
     #the area of each image that we want (the graph)
             #(left,right,top,bottom)
     targetRect=(113,978,29,724)
-
-    def cropRect(source,rect):#copies pixels from the source image within the targetRect
-        left,right,top,bottom=rect
-        newImg=[]
-        for y in range(top,bottom+1):
-            for x in range(left,right+1):
-                newImg+=[source[y*Width+x]]
-        return newImg
+    #the range each axis of the graph covers
+    yMin=1.02
+    yMax=-0.05
+    yRange=yMax-yMin
+    xMin=200
+    xMax=4100
+    xRange=xMax-xMin
 
     #the graph cut out of the larger image
     graph=cropRect(imgdata,targetRect)
@@ -122,15 +136,7 @@ def ReadGraph(image):
     Scale to x and y units
     Save data to file
     '''
-
     graphData=[]#to be filled with values from graph
-
-    def pix(x,y):#checks if the pixel at x,y is black
-        r,g,b=graph[y*Width+x]
-        if r+g+b>=100:
-            return False#not black
-        else:
-            return True#black
 
     #For each x get the y range over which the graph has black pixels
     # or None if the graph is empty at that x value
@@ -149,20 +155,6 @@ def ReadGraph(image):
                 graphData[-1]=(minVal,maxVal)#write these values to data
                 break#next x
 
-    #the range each axis of the graph covers
-    yMin=1.02
-    yMax=-0.05
-    yRange=yMax-yMin
-    xMin=200
-    xMax=4100
-    xRange=xMax-xMin
-
-    #convert graph x,y into scientific x,y
-    def convertx(x):
-        return xMin+xRange*(x/Width)
-    def converty(y):
-        return yMin+yRange*(y/Height)
-
     data=[]#final value written to file
     #convert graph into datapoints
     for x in range(len(graphData)):
@@ -170,6 +162,7 @@ def ReadGraph(image):
         if graphData[x]:
             data+=[(convertx(x),
                     converty(graphData[x][0]),converty(graphData[x][1]))]
+
     return(data)
 
 def Cumulative(l):
@@ -181,18 +174,18 @@ def Cumulative(l):
         divisor+=max(0.1,l[i][1])
     retlist=[]
     for i in range(1,len(l)-1):
-        
+
         low=max(0,i-scanrange)
         high=min(len(l)-1,i+scanrange)
-        
+
         total-=max(0.1,l[low][1]) if l[low]!="x" else 0
         total+=max(0.1,l[i][1]) if l[i]!="x" else 0
-        
+
         divisor-=max(0.1,l[low][1]) if l[low]!="x" else 0
         divisor+=max(0.1,l[high][1]) if l[high]!="x" else 0
 
         retlist+=[(l[i][0],total/divisor)]
-    
+
     return retlist
 
 def Compare(tType,transformation1,transformation2):
@@ -202,13 +195,13 @@ def Compare(tType,transformation1,transformation2):
         tmp=transformation1[:]
         transformation1=transformation2[:]
         transformation2=tmp
-        
+
     k=0
     for j in range(len(transformation1)):
         while transformation1[j][0]>transformation2[k][0] and k<len(transformation2)-1:
             k+=1
         dif+=abs(transformation1[j][1]-transformation2[k][1])
-        
+
     return dif
 
 def AddSortResults(difDict,casNums):
@@ -221,12 +214,13 @@ def AddSortResults(difDict,casNums):
             dif+=difDict[trform][i][0]
         difList+=[(dif,difDict[trform][i][1])]
     difList.sort()
-    
+
     return difList
 
+#TODO Where is the SmartSortResults() function being used?
 def SmartSortResults(difDict,casNums):
     tranformTypes=list(difDict.keys())[:]
-    
+
     for trform in tranformTypes:
         difDict[trform].sort()
     difList=[]
@@ -252,7 +246,7 @@ def SmartSortResults(difDict,casNums):
         if tempList:
             tempList.sort()
             difList+=tempList
-            
+
     return difList
 
 #------------------------------------------------------------------------------
