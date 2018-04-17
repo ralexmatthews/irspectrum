@@ -9,19 +9,7 @@ import warnings
 import os
 from os import path
 from shutil import copyfile
-import PyPDF2
-import sys
-import sqlite3
-import warnings
-import os
-from os import path
-from PIL import Image, ImageTk
-from math import log
-from shutil import copyfile
 
-import multiprocessing as mp
-
-import time
 warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
 
