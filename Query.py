@@ -8,15 +8,15 @@ Description: This program will recieve an IR Spectrograph of an unknown
     list of the closest Spectrographs matches as determined by our algorithm.
 """
 #---------------------------------Imports--------------------------------------
-import PyPDF2
+import PyPDF2 #TODO are we using pyPDF2 in Query.py???
 import time
 import sys
 import sqlite3
-import warnings
+import warnings #TODO are we using warnings in Query.py???
 import os
-from os import path
-from PIL import Image, ImageTk
-from math import log
+from os import path #TODO do we need both import os and from os import path???
+from PIL import Image, ImageTk #TODO are we using ImageTK in Query.py???
+from math import log #TODO are we still using log in Query.py???
 from IR_Functions import *
 import multiprocessing as mp
 #------------------------------------------------------------------------------

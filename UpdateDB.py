@@ -2,22 +2,22 @@
 This can be ran from the command line with the pdf file you wish to extract from
 as an argument, it will save the image in the same directory you are in.
 """
-import PyPDF2
+#---------------------------------Imports--------------------------------------
+import PyPDF2 #TODO is this used in UpdateDB.py???
 import sys
 import sqlite3
-import warnings
+import warnings #TODO are we still using warnings in UpdateDB.py???
 import os
-from os import path
+from os import path #TODO do we need both import os and from os import path???
 from PIL import Image, ImageTk
-from math import log
+from math import log #TODO I don't think we use this anymore.
 from shutil import copyfile
-
 import multiprocessing as mp
-
 import time
-
 from IR_Functions import *
+#------------------------------------------------------------------------------
 
+#---------------------------------Classes/Functions----------------------------
 def tryCommit(conn):
     trying=True
     while trying:
@@ -38,7 +38,7 @@ def tryWrite(sqlQ,cur,dbvalues=None):
             trying=False
         except:
             pass
-            
+
 def tryWork(Jobs):
     try:
         file = Jobs.get(True,0)
@@ -122,9 +122,9 @@ def tryWork(Jobs):
             return fname+" added to DB"
         else:
             return fname+" already in DB"
-            
-            
-        
+
+
+
     except Exception as e:
         #uncomment to debug
         '''
@@ -143,7 +143,9 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs):
             print("[Worker No. "+str(workerNo)+"] "+str(jobNo)+" of "+str(NofJobs)+" "+message)
         else:
             working=False
+#------------------------------------------------------------------------------
 
+#---------------------------------Program Main---------------------------------
 if __name__ == "__main__":
 
     if len(sys.argv)==1:
@@ -158,7 +160,7 @@ if __name__ == "__main__":
     for i in range(len(filedir)):
         Jobs.put(filedir[i])
         JobsDoneQ.put(i+1)
-    
+
     CORES = mp.cpu_count()
     p={}
     print("Starting")
@@ -169,5 +171,4 @@ if __name__ == "__main__":
     for i in range(CORES):
         p[i].join()
     input("Done and Done "+str(time.time()-start))
-        
-                    
+#---------------------------------End of Program-------------------------------

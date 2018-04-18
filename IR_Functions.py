@@ -3,12 +3,12 @@
 """
 #---------------------------------Imports--------------------------------------
 import PyPDF2
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk #TODO are we using ImageTK still???
 import sys
 import warnings
 import os
-from os import path
-from shutil import copyfile
+from os import path #TODO do we need both import os and from os import path???
+from shutil import copyfile #TODO are we still using copyfile in IR_Functions???
 
 warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
@@ -300,5 +300,4 @@ def SmartSortResults(difDict,casNums):
             difList+=tempList
 
     return difList
-
 #------------------------------------------------------------------------------

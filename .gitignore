@@ -4,3 +4,4 @@ values.json
 __pycache__/
 temp/*
 !temp/.gitkeep
+output/Ranked Differences.txt
