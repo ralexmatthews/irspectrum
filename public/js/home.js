@@ -33,6 +33,8 @@ input.onchange = function () {
 // This is where we send the picture to the server and the server will do the comparison
 // and reply with the matches somehow.
 document.getElementById('findButton').addEventListener('click', function () {
+	$(' #bodyholder ').html('');
+
 	let imageInput = input.files[0];
 	let ext = imageInput.name.substring(imageInput.name.length - 3);
 	if (ext == 'pdf' || ext == 'jpg') {
@@ -60,6 +62,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 
 				let winnerULS = [];
 
+				// create the winners nav list on left side
 				for (let i = 0; i < 20; i++) {
 					let li = document.createElement('li');
 					li.classList.add('list-group-item');
@@ -68,29 +71,45 @@ document.getElementById('findButton').addEventListener('click', function () {
 					winnerULS.push(li);
 				}
 
+				// add those to the list
 				for (let i = 0; i < 20; i++) {
 					winnersList.appendChild(winnerULS[i]);
 				}
 
+				// add the list to the screen
 				winnersContainer.appendChild(winnersList);
 				winnersContainer.classList.add('floatleft');
-				document.body.appendChild(winnersContainer);
+				$(' #bodyholder ').append(winnersContainer);
 
+				// add the graph image of the uploaded pic
 				let uploaded = document.createElement('img');
 				uploaded.src = '/images/temp.jpg';
 				uploaded.classList.add('resize');
+				$(' #bodyholder ').append(uploaded);
 
-				document.body.appendChild(uploaded);
-
+				// create holder of results
 				let resultsSpan = document.createElement('span');
 				resultsSpan.classList.add('card');
+
+				// create the results picture
 				let resultsImg = document.createElement('img');
 				resultsImg.id = 'resultsImage';
 				resultsImg.classList.add('resize');
 				resultsImg.classList.add('card-img-top');
 				resultsImg.src = '/images/' + response[1] + '.jpg';
+
+				// create a holder for the results info
 				let info = document.createElement('div');
 				info.classList.add('card-body');
+
+				// create the picture of the winner molecule
+				let molecule = document.createElement('img');
+				molecule.id = 'molecule';
+				molecule.classList.add('smaller-resize');
+				molecule.src = '/info/' + response[1] + '.png';
+				info.appendChild(molecule);
+
+				// create the name of the result
 				let name = document.createElement('h5');
 				name.innerText = response[1];
 				name.id = 'name';
@@ -98,7 +117,42 @@ document.getElementById('findButton').addEventListener('click', function () {
 
 				resultsSpan.appendChild(resultsImg);
 				resultsSpan.appendChild(info);
-				document.body.appendChild(resultsSpan);
+				$(' #bodyholder ').append(resultsSpan);
+
+				// get other info about the results
+				$.ajax({
+					url: 'http://' + location.host + '/info/' + response[1] + '.json',
+					processData: false,
+					contentType: false,
+					type: 'GET',
+					complete: function (json) {
+						let moleculeinfo = json.responseJSON;
+
+						// create html stuff
+						let specID = document.createElement('p');
+						let cas = document.createElement('p');
+						let formula = document.createElement('p');
+						let compound = document.createElement('p');
+
+						// give the html stuff their words
+						specID.innerText = 'Spectrum ID: ' + moleculeinfo.spectrumID;
+						cas.innerText = 'CAS: ' + moleculeinfo.cas;
+						formula.innerHTML = '<p>Formula: ' + getFormulaHTML(moleculeinfo.formula) + '</p>';
+						compound.innerText = 'Name: ' + moleculeinfo.name;
+
+						// give the html stuff id's
+						specID.id = 'specid';
+						cas.id = 'cas';
+						formula.id = 'formula';
+						compound.id = 'compound';
+
+						// display the html stuff
+						info.appendChild(specID);
+						info.appendChild(cas);
+						info.appendChild(formula);
+						info.appendChild(compound);
+					}
+				});
 
 				// set cursor back to normal
 				document.body.style.cursor = 'default';
@@ -108,6 +162,52 @@ document.getElementById('findButton').addEventListener('click', function () {
 });
 
 let updateResults = evt => {
-	$(' #resultsImage ').attr('src', '/images/' + evt.target.innerText + '.jpg');
-	$(' #name ').text(evt.target.innerText);
+	$.ajax({
+		url: 'http://' + location.host + '/info/' + evt.target.innerText + '.json',
+		processData: false,
+		contentType: false,
+		type: 'GET',
+		complete: function (json) {
+			let moleculeinfo = json.responseJSON;
+
+			$(' #resultsImage ').attr('src', '/images/' + evt.target.innerText + '.jpg');
+			$(' #name ').text(evt.target.innerText);
+			$(' #specid ').text('Spectrum ID: ' + moleculeinfo.spectrumID);
+			$(' #cas ').text('CAS: ' + moleculeinfo.cas);
+			$(' #formula ').html('<p>Formula: ' + getFormulaHTML(moleculeinfo.formula) + '</p>');
+			$(' #compound ').text('Name: ' + moleculeinfo.name);
+			$(' #molecule ').attr('src', '/info/' + evt.target.innerText + '.png');
+
+
+		}
+	});
+};
+
+let getFormulaHTML = formula => {
+	let nums = false;
+	let returnstring = '';
+
+	for (let i = 0; i < formula.length; i++) {
+		if (isNaN(formula.charAt(i))) {
+			if (nums) {
+				nums = false;
+				returnstring += '</sub>' + formula.charAt(i);
+			} else {
+				returnstring += formula.charAt(i);
+			}
+		} else {
+			if (!nums) {
+				nums = true;
+				returnstring += '<sub>' + formula.charAt(i);
+			} else {
+				returnstring += formula.charAt(i);
+			}
+		}
+	}
+
+	if (nums) {
+		returnstring += '</sub>';
+	}
+
+	return returnstring;
 };
