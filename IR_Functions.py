@@ -9,19 +9,7 @@ import warnings
 import os
 from os import path
 from shutil import copyfile
-import PyPDF2
-import sys
-import sqlite3
-import warnings
-import os
-from os import path
-from PIL import Image, ImageTk
-from math import log
-from shutil import copyfile
 
-import multiprocessing as mp
-
-import time
 warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
 
@@ -186,7 +174,7 @@ def ReadGraph(image):
 
 def Cumulative(l):
     l=['x']+l[:]+['x']
-    scanrange=20
+    scanrange=10
     divisor=0
     total=0
     for i in range(1,scanrange+1):
