@@ -19,6 +19,7 @@ from PIL import Image, ImageTk #TODO are we using ImageTK in Query.py???
 from math import log #TODO are we still using log in Query.py???
 from IR_Functions import *
 import multiprocessing as mp
+from shutil import copyfile
 #------------------------------------------------------------------------------
 
 #---------------------------------Variables------------------------------------
@@ -69,8 +70,8 @@ def worker(workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,query,transformTy
 def formatQueryData(queryPath):
     """ Open the source image """
     images = PullImages(queryPath) #PullImages() from IR_Functions.py
-
     data=ReadGraph(images[0]) #ReadGraph() from IR_Functions.py
+    copyfile(images[0],"public\\images\\temp.jpg")
     os.remove(images[0]) #Cleans up temp data from user's Query.
     os.remove(queryPath)
 

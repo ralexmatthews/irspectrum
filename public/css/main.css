@@ -12,12 +12,17 @@
 }
 
 .resize {
-	width: 540px;
+	width: 500px;
+	height: auto;
+}
+
+.smaller-resize {
+	width: 250px;
 	height: auto;
 }
 
 #findButton {
-	margin: 1rem 1rem 1rem 5rem;
+	margin: 1rem;
 }
 
 #selectFile {
@@ -61,7 +66,10 @@ body ul li a {
 	color: #000000;
 }
 
-.btn-primary, .btn-primary:hover, .btn-primary:active, .btn-primary:visited {
+.btn-primary,
+.btn-primary:hover,
+.btn-primary:active,
+.btn-primary:visited {
 	background-color: #444444 !important;
 	border-color: #000000 !important;
 }
@@ -79,5 +87,34 @@ html {
 }
 
 body {
+	height: 100%;
+}
+
+.floatleft {
+	float: left;
+	margin: 1rem 2rem 2rem 1rem;
+	width: 10rem;
+}
+
+#buttonholder {
+	display: inline-block;
+	width: 50%;
+}
+
+.card {
+	display: inline-table;
+}
+
+.aboutus {
+	width: 80%;
+	margin: 1rem 5rem 2rem 1rem;
+}
+
+.spaced {
+	margin: 0 0 1rem 1rem;
+}
+
+#bodyholder {
+	width: 100%;
 	height: 100%;
 }
