@@ -1,13 +1,12 @@
 'use strict';
 
 const express = require('express'),
-	app = express();
-
-let bodyParser = require('body-parser');
-const formidable = require('formidable');
-const path = require('path');
-const fs = require('fs');
-const spawn = require('child_process').spawn;
+	app = express(),
+	bodyParser = require('body-parser'),
+	formidable = require('formidable'),
+	path = require('path'),
+	fs = require('fs'),
+	spawn = require('child_process').spawn;
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({
@@ -71,7 +70,7 @@ const server = app.listen(3000, function () {
 // this function runs the python programs
 let runJoshsPython = function (pathToPDF, res) {
 	// run 'Compare to Query.py'
-	const comparePy = spawn('python', ['Query.py',pathToPDF]);
+	const comparePy = spawn('python', ['Query.py', pathToPDF]);
 
 	// if something wonky happens let me know
 	comparePy.on('error', err => {
@@ -79,7 +78,7 @@ let runJoshsPython = function (pathToPDF, res) {
 	});
 
 	// if the program has an exception let me know
-	comparePy.on('uncaughtException', function(err) {
+	comparePy.on('uncaughtException', function (err) {
 		console.log('Caught exception: ' + err);
 	});
 
@@ -104,5 +103,21 @@ let returnResults = function (winners, res) {
 		2: winners[1],
 		3: winners[2],
 		4: winners[3],
+		5: winners[4],
+		6: winners[5],
+		7: winners[6],
+		8: winners[7],
+		9: winners[8],
+		10: winners[9],
+		11: winners[10],
+		12: winners[11],
+		13: winners[12],
+		14: winners[13],
+		15: winners[14],
+		16: winners[15],
+		17: winners[16],
+		18: winners[17],
+		19: winners[18],
+		20: winners[19],
 	}));
 };
