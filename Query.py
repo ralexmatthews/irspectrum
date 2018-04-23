@@ -48,7 +48,7 @@ def work(DataQ,ReturnQ,query,transformTypes):
         return True
     except Exception as e:
         #uncomment to debug
-        #'''
+        '''
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb))
@@ -71,9 +71,11 @@ def formatQueryData(queryPath):
     """ Open the source image """
     images = PullImages(queryPath) #PullImages() from IR_Functions.py
     data=ReadGraph(images[0]) #ReadGraph() from IR_Functions.py
+    
     copyfile(images[0],"public\\images\\temp.jpg")
     os.remove(images[0]) #Cleans up temp data from user's Query.
-    os.remove(queryPath)
+    if 'temp' in queryPath:
+        os.remove(queryPath)
 
     #calculate each transformation
     transformDict={}

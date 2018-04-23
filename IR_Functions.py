@@ -7,13 +7,8 @@ from PIL import Image, ImageTk #TODO are we using ImageTK still???
 import sys
 import warnings
 import os
-<<<<<<< HEAD
-from os import path
-from shutil import copyfile
-=======
 from os import path #TODO do we need both import os and from os import path???
 from shutil import copyfile #TODO are we still using copyfile in IR_Functions???
->>>>>>> dcd03f1aaa241208a6d8f782321c9b15cbe54b1a
 
 warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
@@ -79,8 +74,8 @@ def PullStructure(filename):
             data = xObject[obj].getData()
             if xObject[obj]['/Filter'] == '/FlateDecode':
                 img = Image.frombytes("P", size, data)
-                img.save(filename + ".png")
-                images+=[filename + ".png"]
+                img.save(filename.split('.')[0] + ".png")
+                images+=[filename.split('.')[0] + ".png"]
     return images
 
 def PullText(filename):
@@ -133,7 +128,21 @@ def PullText(filename):
     except:
         print("There was an error extracting text from the PDF")
 
-    return [specID, cas, formula, name]
+    #return [specID, cas, formula, name]
+    return {"spectrumID":specID, "cas":cas, "formula":formula, "name":name}
+
+def CleanStructure(filename):
+    img = Image.open(filename)
+    imgdata=list(img.getdata())#the pixels from the image
+    
+    img = Image.new('RGBA', (img.size[0],img.size[1]))
+    
+    #print(imgdata)
+    
+    imgdata=[(i,i,i,255)  if i<31 else (i,i,i,0) for i in imgdata]
+    
+    img.putdata(imgdata)
+    img.save(filename)
 
 #TODO Should we break this function into smaller parts?
 def ReadGraph(image):
@@ -224,7 +233,7 @@ def ReadGraph(image):
 
 def Cumulative(l):
     l=['x']+l[:]+['x']
-    scanrange=10
+    scanrange=20
     divisor=0
     total=0
     for i in range(1,scanrange+1):
