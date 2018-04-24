@@ -74,8 +74,8 @@ def PullStructure(filename):
             data = xObject[obj].getData()
             if xObject[obj]['/Filter'] == '/FlateDecode':
                 img = Image.frombytes("P", size, data)
-                img.save(filename + ".png")
-                images+=[filename + ".png"]
+                img.save(filename.split('.')[0] + ".png")
+                images+=[filename.split('.')[0] + ".png"]
     return images
 
 def PullText(filename):
@@ -128,7 +128,21 @@ def PullText(filename):
     except:
         print("There was an error extracting text from the PDF")
 
-    return [specID, cas, formula, name]
+    #return [specID, cas, formula, name]
+    return {"spectrumID":specID, "cas":cas, "formula":formula, "name":name}
+
+def CleanStructure(filename):
+    img = Image.open(filename)
+    imgdata=list(img.getdata())#the pixels from the image
+    
+    img = Image.new('RGBA', (img.size[0],img.size[1]))
+    
+    #print(imgdata)
+    
+    imgdata=[(i,i,i,255)  if i<31 else (i,i,i,0) for i in imgdata]
+    
+    img.putdata(imgdata)
+    img.save(filename)
 
 #TODO Should we break this function into smaller parts?
 def ReadGraph(image):
