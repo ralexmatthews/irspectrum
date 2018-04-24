@@ -18,13 +18,30 @@ from IR_Functions import *
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
+def checkForDB() :
+    # if DB file somehow gets deleted re-create it
+    if not os.path.exists("IR.db"):
+        file = open('IR.db', 'w+')
+        file.close()
+
+    sqlRAW = "CREATE TABLE IF NOT EXISTS `IR_Raw` ( `CAS_Num` TEXT, `Wavelength` NUMERIC, `x_min` NUMERIC, `x_max` NUMERIC )"
+    sqlALG = "CREATE TABLE IF NOT EXISTS `IR_JoshEllisAlgorithm` ( `CAS_Num` TEXT, `Type` TEXT, `Wavelength` NUMERIC, `Value` NUMERIC )"
+    sqlCOMP = "CREATE TABLE IF NOT EXISTS `IR_Compounds` ( `Spectrum_ID` TEXT, `CAS_Num` TEXT, `Formula` TEXT, `Compound_Name` TEXT, PRIMARY KEY(`Spectrum_ID`) )"
+
+    conn = sqlite3.connect(os.path.realpath("IR.db"))
+    cur = conn.cursor()
+    tryWrite(sqlRAW, cur)
+    tryWrite(sqlALG, cur)
+    tryWrite(sqlCOMP, cur)
+    tryCommit(conn)
+
 def tryCommit(conn):
     trying=True
     while trying:
         try:
             conn.commit()
             trying=False
-        except:
+        except Exception as e:
             pass
 
 def tryWrite(sqlQ,cur,dbvalues=None):
@@ -36,7 +53,7 @@ def tryWrite(sqlQ,cur,dbvalues=None):
             else:
                 cur.execute(sqlQ)
             trying=False
-        except:
+        except Exception as e:
             pass
 
 def tryWork(Jobs):
@@ -47,21 +64,38 @@ def tryWork(Jobs):
         images = PullImages(file)
 
         addToDB = False
+        addToDBAlg = False
 
         fname = file.split("\\")[-1]
         casNum = fname.split(".")[0]
 
         """ is this file already in the database? """
         conn = sqlite3.connect(os.path.realpath("IR.db"))
-        sqlQ = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+casNum+"'"
+        sqlQ = "SELECT CAS_Num FROM IR_Compounds WHERE CAS_Num='"+casNum+"'"
+        sqlRaw = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+casNum+"'"
+        sqlAlg = "SELECT CAS_Num FROM IR_JoshEllisAlgorithm WHERE CAS_Num='"+casNum+"'"
+        sqlCompounds = "INSERT INTO IR_Compounds(Spectrum_ID, CAS_Num, Formula, Compound_Name) VALUES (?, ?, ?, ?)"
+
         cur = conn.cursor()
-        tryWrite(sqlQ,cur)
+        curRaw = conn.cursor()
+        curAlg = conn.cursor()
+
+        tryWrite(sqlQ, cur)
+        tryWrite(sqlRaw, curRaw)
+        tryWrite(sqlAlg, curAlg)
+        
         qData = cur.fetchall()
+        rData = curRaw.fetchall()
+        aData = curAlg.fetchall()
+
+        if len(rData)==0:
+            addToDB = True
+        if len(aData)==0:
+            addToDBAlg = True
 
         """ if not in the database set the flag to add it """
-        if len(qData)==0:
-            addToDB = True
-            
+        if len(qData)==0: 
+                            
             copyfile(images[0],"public\\images\\"+casNum+".jpg")
             
             structure=PullStructure(file)[0]
@@ -70,12 +104,16 @@ def tryWork(Jobs):
             os.remove(structure)
             
             values=PullText(file)
+            #Save compound data into the database
+            dbvalues = (list(values.values())[0], casNum, list(values.values())[2], list(values.values())[3])
+            
+            curr = conn.cursor()
+            tryWrite(sqlCompounds, curr, dbvalues)
+            tryCommit(conn)
+            
             f=open("public\\info\\"+casNum+".json",'w')
             f.write(str(values).replace("'",'"'))
             f.close()
-        else:
-            os.remove(images[0])
-            return casNum+" already in"
 
         data=ReadGraph(images[0])
         os.remove(images[0])
@@ -101,15 +139,16 @@ def tryWork(Jobs):
             d=[]
             for each in transformDict[k]:
                 d+=[str(each[0])+','+str(each[1])]
-                if addToDB: # add stuff to DB if doesn't exist
+                if addToDBAlg: # add stuff to DB if doesn't exist
                     dbvalues = (casNum, k, each[0], each[1])
-                    cur = conn.cursor()
-                    tryWrite(sqlQ,cur, dbvalues)
+                    currr = conn.cursor()
+                    tryWrite(sqlQ, currr, dbvalues)
                 #save data
 
-        if addToDB:
+        if addToDBAlg or addToDB:
             tryCommit(conn)
             addToDB = False
+            addToDBAlg = False
             return casNum+" added to DB"
         else:
             return casNum+" already in DB"
@@ -139,6 +178,8 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs):
 #---------------------------------Program Main---------------------------------
 if __name__ == "__main__":
 
+    checkForDB()
+    
     filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
 
     Jobs=mp.Queue()
