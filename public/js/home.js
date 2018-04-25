@@ -41,8 +41,13 @@ document.getElementById('findButton').addEventListener('click', function () {
 		// show spinny wheel until finished
 		document.body.style.cursor = 'wait';
 
+		// get the timestamp for the file
+		let timeStampInMs = window.performance && window.performance.now && window.performance.timing && window.performance.timing.navigationStart ? window.performance.now() + window.performance.timing.navigationStart : Date.now();
+		timeStampInMs = timeStampInMs.toString();
+
 		// prepare file to be sent
 		let myData = new FormData();
+		myData.append('timestamp', timeStampInMs);
 		myData.append('file', imageInput);
 
 		// send file to server
@@ -83,7 +88,7 @@ document.getElementById('findButton').addEventListener('click', function () {
 
 				// add the graph image of the uploaded pic
 				let uploaded = document.createElement('img');
-				uploaded.src = '/images/temp.jpg';
+				uploaded.src = '/uploads/' + imageInput.name.substring(0, imageInput.name.length - 4) + '_' + timeStampInMs + '.jpg';
 				uploaded.classList.add('resize');
 				$(' #bodyholder ').append(uploaded);
 
