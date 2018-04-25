@@ -3,3 +3,4 @@ node_modules/
 values.json
 __pycache__/
 output/
+public\uploads\*.jpg

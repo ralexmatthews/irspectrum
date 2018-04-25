@@ -67,8 +67,22 @@ def formatQueryData(queryPath, transformTypes, filename):
     """ Open the source image """
     images = PullImages(queryPath)  # PullImages() from IR_Functions.py
     data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
-
+    
     copyfile(images[0], "public\\uploads\\" + filename)
+
+    def timeStamp(f):
+        return int(f.split('.')[0].split('_')[-1])
+    
+    currentTime=timeStamp(filename)
+    holdTime=5*60*1000
+    for each in [file for file in os.listdir("public\\uploads") if file.endswith(".jpg")]:
+        try:
+            if timeStamp(each)<currentTime-holdTime:
+                os.remove("public\\uploads\\"+each)
+        except:
+            pass
+    f.close()
+    
     os.remove(images[0])  # Cleans up temp data from user's Query.
     if 'temp' in queryPath:
         os.remove(queryPath)
