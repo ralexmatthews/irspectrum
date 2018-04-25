@@ -8,15 +8,9 @@ Description: This program will recieve an IR Spectrograph of an unknown
     list of the closest Spectrographs matches as determined by our algorithm.
 """
 #---------------------------------Imports--------------------------------------
-import PyPDF2 #TODO are we using pyPDF2 in Query.py???
-import time
 import sys
 import sqlite3
-import warnings #TODO are we using warnings in Query.py???
 import os
-from os import path #TODO do we need both import os and from os import path???
-from PIL import Image, ImageTk #TODO are we using ImageTK in Query.py???
-from math import log #TODO are we still using log in Query.py???
 from IR_Functions import *
 import multiprocessing as mp
 from shutil import copyfile
@@ -41,6 +35,8 @@ def work(DataQ,ReturnQ,query,transformTypes):
 
             #total the differences between the compound and the query also draw
             #an image to show this comparison. Compare() from IR_Functions.py
+            #if not "raw" in tType:
+            
             dif=Compare(tType,dataDict[tType],query[tType])
 
             difDict[tType]+=[(dif,casNum)]
@@ -48,10 +44,11 @@ def work(DataQ,ReturnQ,query,transformTypes):
         return True
     except Exception as e:
         #uncomment to debug
-        '''
+        #'''
+        print('\nERROR!:')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
-        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb))
+        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
         #'''
         return False
 
@@ -67,7 +64,7 @@ def worker(workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,query,transformTy
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
-def formatQueryData(queryPath):
+def formatQueryData(queryPath,transformTypes):
     """ Open the source image """
     images = PullImages(queryPath) #PullImages() from IR_Functions.py
     data=ReadGraph(images[0]) #ReadGraph() from IR_Functions.py
@@ -78,50 +75,54 @@ def formatQueryData(queryPath):
         os.remove(queryPath)
 
     #calculate each transformation
-    transformDict={}
+    queryDict={}
     #Cumulative() from IR_Functions.py
-    #TODO change Cumulative() to accept data instead of one element at a time?
-    transformDict["cumulative"]=Cumulative([(e[0],e[2]) for e in data])
+    queryDict=ConvertQuery(data,transformTypes)
 
-    return transformDict
+    return queryDict
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-def compareQueryToDB(formatedQueryData):
+def compareQueryToDB(formatedQueryData,transformTypes):
     #only compare by cumulative for now
-    transformTypes=["cumulative"]
 
     ## used to grab the total number of molecules
     conn = sqlite3.connect(os.path.realpath("IR.db"))
-    sqlQ = "SELECT CAS_Num FROM IR_Raw GROUP BY CAS_Num"
+    sqlQ = "SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num"
     cur = conn.cursor()
     cur.execute(sqlQ)
     qData = cur.fetchall()
 
-    sqlQ = "SELECT CAS_Num,Type,Wavelength,Value FROM IR_JoshEllisAlgorithm"
+    sqlQ = "SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data"
     cur = conn.cursor()
     cur.execute(sqlQ)
     data = cur.fetchall()
 
     dataDict={}
-
     for i in range(len(qData)):
         dataDict[qData[i][0]]={}
         for tType in transformTypes:
             dataDict[qData[i][0]][tType]=[]
     for i in range(len(data)):
-        dataDict[data[i][0]][data[i][1]]+=[data[i][2:]]
+        if 'raw'!=data[i][1]:
+            dataDict[data[i][0]][data[i][1]]+=[data[i][2:]]
+        else:
+            for tType in transformTypes:
+                if 'raw' in tType:
+                    dataDict[data[i][0]][tType]+=[data[i][2:]]
+
 
     difDict={}
-    for tType in formatedQueryData:
+    for tType in transformTypes:
         difDict[tType]=[]
-
+    
     CORES = mp.cpu_count()
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
     ReadRequestQ=mp.Queue()
     DataQ=mp.Queue()
     DataBuffer=CORES*2
+    
     for i in range(len(qData)):
         JobsDoneQ.put(i+1)
         ReadRequestQ.put(1)
@@ -142,19 +143,21 @@ def compareQueryToDB(formatedQueryData):
         retDict = ReturnQ.get()
         for tType in transformTypes:
             difDict[tType]+=retDict[tType]
-        if ReadRequestQ.get():
+        t=ReadRequestQ.get()
+        if t:
             DataQ.put((qData[i][0],dataDict[qData[i][0]]))
 
     for i in range(CORES):
         p[i].join()
 
     #sort compounds by difference. AddSortResults() from IR_Functions.py
-    results=AddSortResults(difDict,[a[0] for a in qData])[:200]
+    results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
     retString=""
 
     #save list of compound differences to file
     for i in range(len(results)):
         retString+=results[i][1]+" "
+        #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
 
     #Gives sorted list of Output to main.js
     print(retString.strip())
@@ -164,7 +167,13 @@ def compareQueryToDB(formatedQueryData):
 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
-    formatedQueryData = formatQueryData(sys.argv[1])
+    
+    f=open("public\\types.keys",'r')
+    transformTypes=f.readlines()
+    f.close()
+    #transformTypes=["cumulative.raw.10","cumulative.raw.15","cumulative.raw.20"]
+    
+    formatedQueryData = formatQueryData(sys.argv[1],transformTypes)
 
-    compareQueryToDB(formatedQueryData)
+    compareQueryToDB(formatedQueryData,transformTypes)
 #---------------------------------End of Program-------------------------------

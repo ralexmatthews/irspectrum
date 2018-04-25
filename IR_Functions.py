@@ -137,8 +137,6 @@ def CleanStructure(filename):
     
     img = Image.new('RGBA', (img.size[0],img.size[1]))
     
-    #print(imgdata)
-    
     imgdata=[(i,i,i,255)  if i<31 else (i,i,i,0) for i in imgdata]
     
     img.putdata(imgdata)
@@ -226,14 +224,12 @@ def ReadGraph(image):
     for x in range(len(graphData)):
         #Points in format x,y
         if graphData[x]:
-            data+=[(convertx(x),
-                    converty(graphData[x][0]),converty(graphData[x][1]))]
+            data+=[(convertx(x),converty(graphData[x][1]))]
 
     return(data)
 
-def Cumulative(l):
+def Cumulative(l,scanrange):
     l=['x']+l[:]+['x']
-    scanrange=20
     divisor=0
     total=0
     for i in range(1,scanrange+1):
@@ -254,7 +250,32 @@ def Cumulative(l):
 
     return retlist
 
-def Compare(tType,transformation1,transformation2):
+def Raw(l):
+    return l
+
+def ConvertQuery(l,tTypes):
+    queryDict={}
+    for tType in tTypes:
+        queryDict[tType]=[]
+        if "cumulative" in tType:
+            queryDict[tType]+=Cumulative(l,int(tType.split('.')[-1]))
+    return queryDict
+
+def Convert(l,tType):
+    if "raw" in tType:
+        return l
+    elif "cumulative" in tType:
+        return Cumulative(l,int(tType.split('.')[-1]))
+
+def Compare(tType,subject,query):
+    if "cumulative" in tType and not "raw" in tType:
+        return directCompare(subject,query)
+    elif "cumulative" in tType and "raw" in tType:
+        return directCompare( Cumulative(subject,int(tType.split('.')[-1])),
+                             query)
+                            
+
+def directCompare(transformation1,transformation2):
     dif=0
     #Swap if needed, want t1 to be sorter than t2
     if len(transformation1)>len(transformation2):
@@ -293,12 +314,11 @@ def SmartSortResults(difDict,casNums):
 
     bestDict={}
     for i in range(len(casNums)):#casNum
-        bestDict[casNums]=[]
+        bestDict[casNums[i]]=[]
 
     for i in range(len(casNums)):
         tempList=[]
         for trform in tranformTypes:
-            print(i,trform,difDict[trform][i][1])
             if bestDict[difDict[trform][i][1]]!="Done":
                 bestDict[difDict[trform][i][1]]+=[(difDict[trform][i][0],trform)]
         for casNum in list(bestDict.keys()):
