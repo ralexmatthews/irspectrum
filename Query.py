@@ -25,21 +25,19 @@ from shutil import copyfile
 #------------------------------------------------------------------------------
 
 #----------------------------Multiprocessing functions-------------------------
-def work(DataQ,ReturnQ,query,transformTypes):
+
+
+def work(DataQ, ReturnQ, query, transformTypes):
     try:
-        casNum,dataDict = DataQ.get()
+        casNum, dataDict = DataQ.get()
 
-        difDict={}
+        difDict = {}
         for tType in transformTypes:
-            difDict[tType]=[]
+            difDict[tType] = []
 
-            #total the differences between the compound and the query also draw
-            #an image to show this comparison. Compare() from IR_Functions.py
-            #if not "raw" in tType:
-            
             dif=Compare(tType,dataDict[tType],query[tType])
 
-            difDict[tType]+=[(dif,casNum)]
+            difDict[tType] += [(dif, casNum)]
         ReturnQ.put(difDict)
         return True
     except Exception as e:
@@ -52,25 +50,26 @@ def work(DataQ,ReturnQ,query,transformTypes):
         #'''
         return False
 
-def worker(workerNo,JobsDoneQ,NofJobs,NofWorkers,ReturnQ,DataQ,query,transformTypes):
-    #Worker loop
-    working=True
+
+def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query, transformTypes):
+    # Worker loop
+    working = True
     while working:
-        jobNo=JobsDoneQ.get()
-        message=work(DataQ,ReturnQ,query,transformTypes)
-        if NofJobs-jobNo<=NofWorkers-1:
-            working=False
+        jobNo = JobsDoneQ.get()
+        message = work(DataQ, ReturnQ, query, transformTypes)
+        if NofJobs-jobNo <= NofWorkers-1:
+            working = False
 
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
-def formatQueryData(queryPath,transformTypes):
+def formatQueryData(queryPath, transformTypes, filename):
     """ Open the source image """
-    images = PullImages(queryPath) #PullImages() from IR_Functions.py
-    data=ReadGraph(images[0]) #ReadGraph() from IR_Functions.py
-    
-    copyfile(images[0],"public\\images\\temp.jpg")
-    os.remove(images[0]) #Cleans up temp data from user's Query.
+    images = PullImages(queryPath)  # PullImages() from IR_Functions.py
+    data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
+
+    copyfile(images[0], "public\\uploads\\" + filename)
+    os.remove(images[0])  # Cleans up temp data from user's Query.
     if 'temp' in queryPath:
         os.remove(queryPath)
 
@@ -84,9 +83,8 @@ def formatQueryData(queryPath,transformTypes):
 
 #------------------------------------------------------------------------------
 def compareQueryToDB(formatedQueryData,transformTypes):
-    #only compare by cumulative for now
 
-    ## used to grab the total number of molecules
+    # used to grab the total number of molecules
     conn = sqlite3.connect(os.path.realpath("IR.db"))
     sqlQ = "SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num"
     cur = conn.cursor()
@@ -98,11 +96,12 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     cur.execute(sqlQ)
     data = cur.fetchall()
 
-    dataDict={}
+    dataDict = {}
+
     for i in range(len(qData)):
-        dataDict[qData[i][0]]={}
+        dataDict[qData[i][0]] = {}
         for tType in transformTypes:
-            dataDict[qData[i][0]][tType]=[]
+            dataDict[qData[i][0]][tType] = []
     for i in range(len(data)):
         if 'raw'!=data[i][1]:
             dataDict[data[i][0]][data[i][1]]+=[data[i][2:]]
@@ -127,25 +126,23 @@ def compareQueryToDB(formatedQueryData,transformTypes):
         JobsDoneQ.put(i+1)
         ReadRequestQ.put(1)
     for i in range(DataBuffer):
-        DataQ.put((qData[i][0],dataDict[qData[i][0]]))
+        DataQ.put((qData[i][0], dataDict[qData[i][0]]))
         ReadRequestQ.get()
         ReadRequestQ.put(0)
 
-    p={}
+    p = {}
     for i in range(CORES):
-        p[i] = mp.Process(target = worker,\
-            args=[i,JobsDoneQ,len(qData),CORES,ReturnQ,DataQ\
-                  ,formatedQueryData,transformTypes])
+        p[i] = mp.Process(target=worker,
+                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ, formatedQueryData, transformTypes])
         p[i].start()
 
-    #Read returned data from workers, add new read reqests
-    for i in range(DataBuffer,len(qData)+DataBuffer):
+    # Read returned data from workers, add new read reqests
+    for i in range(DataBuffer, len(qData)+DataBuffer):
         retDict = ReturnQ.get()
         for tType in transformTypes:
-            difDict[tType]+=retDict[tType]
-        t=ReadRequestQ.get()
-        if t:
-            DataQ.put((qData[i][0],dataDict[qData[i][0]]))
+            difDict[tType] += retDict[tType]
+        if ReadRequestQ.get():
+            DataQ.put((qData[i][0], dataDict[qData[i][0]]))
 
     for i in range(CORES):
         p[i].join()
@@ -154,16 +151,17 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
     retString=""
 
-    #save list of compound differences to file
+    # save list of compound differences to file
     for i in range(len(results)):
         retString+=results[i][1]+" "
         #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
 
-    #Gives sorted list of Output to main.js
+    # Gives sorted list of Output to main.js
     print(retString.strip())
 
     sys.stdout.flush()
 #------------------------------------------------------------------------------
+
 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -171,9 +169,8 @@ if __name__ == "__main__":
     f=open("public\\types.keys",'r')
     transformTypes=f.readlines()
     f.close()
-    #transformTypes=["cumulative.raw.10","cumulative.raw.15","cumulative.raw.20"]
     
-    formatedQueryData = formatQueryData(sys.argv[1],transformTypes)
+    formatedQueryData = formatQueryData(sys.argv[1],transformTypes, sys.argv[2])
 
     compareQueryToDB(formatedQueryData,transformTypes)
 #---------------------------------End of Program-------------------------------
