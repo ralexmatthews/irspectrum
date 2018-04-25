@@ -134,7 +134,7 @@ def tryWork(Jobs,transformTypes):
 
     except Exception as e:
         #uncomment to debug
-        #'''
+        '''
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb))
