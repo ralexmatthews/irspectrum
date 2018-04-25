@@ -59,8 +59,8 @@ app.post('/getmatch', function (req, res) {
 
 	// once its finished saving, do the business. This is where the magic comparing happens
 	form.on('end', () => {
+		// path to the file including the timestamp. etc: c:/something/somethingelse/90-40-3_a_123456789.pdf
 		filepath = path.join(form.uploadDir, filename.substring(0, filename.length - 4) + '_' + timestamp + filename.substring(filename.length - 4));
-		console.log(oldFilePath, filepath);
 		fs.rename(oldFilePath, filepath, err => {
 			if (err) {
 				console.log(err);

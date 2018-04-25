@@ -76,9 +76,11 @@ def formatQueryData(queryPath, filename):
     """ Open the source image """
     images = PullImages(queryPath)  # PullImages() from IR_Functions.py
     data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
-    copyfile(images[0], "public\\uploads\\" + filename)
+
+    copyfile(images[0], "public\\images\\temp.jpg")
     os.remove(images[0])  # Cleans up temp data from user's Query.
-    os.remove(queryPath)
+    if 'temp' in queryPath:
+        os.remove(queryPath)
 
     # calculate each transformation
     transformDict = {}

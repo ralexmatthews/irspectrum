@@ -49,12 +49,11 @@ def tryWork(Jobs):
         addToDB = False
 
         fname = file.split("\\")[-1]
-        #fname = path.split("\\")[-1]
-        fname = fname.split(".")[0]
+        casNum = fname.split(".")[0]
 
         """ is this file already in the database? """
         conn = sqlite3.connect(os.path.realpath("IR.db"))
-        sqlQ = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+fname+"'"
+        sqlQ = "SELECT CAS_Num FROM IR_Raw WHERE CAS_Num='"+casNum+"'"
         cur = conn.cursor()
         tryWrite(sqlQ,cur)
         qData = cur.fetchall()
@@ -62,10 +61,21 @@ def tryWork(Jobs):
         """ if not in the database set the flag to add it """
         if len(qData)==0:
             addToDB = True
-            copyfile(images[0],"public\\images\\"+fname+".jpg")
+            
+            copyfile(images[0],"public\\images\\"+casNum+".jpg")
+            
+            structure=PullStructure(file)[0]
+            CleanStructure(structure)
+            copyfile(structure,"public\\info\\"+structure.split("\\")[-1])
+            os.remove(structure)
+            
+            values=PullText(file)
+            f=open("public\\info\\"+casNum+".json",'w')
+            f.write(str(values).replace("'",'"'))
+            f.close()
         else:
             os.remove(images[0])
-            return fname+" already in"
+            return casNum+" already in"
 
         data=ReadGraph(images[0])
         os.remove(images[0])
@@ -75,29 +85,15 @@ def tryWork(Jobs):
 
         for element in data:
             if addToDB:
-                dbvalues = (fname, element[0], element[1], element[2])
+                dbvalues = (casNum, element[0], element[1], element[2])
                 cur = conn.cursor()
                 tryWrite(sqlQ,cur, dbvalues)
         if addToDB:
             tryCommit(conn)
 
-        #Height and Width of the part of the graph containing data
-        Width=866
-        Height=696
-
         #calculate each transformation
         transformDict={}
         transformDict["cumulative"]=Cumulative([(e[0],e[2]) for e in data])
-
-        #function to draw pixels
-        def drawPix(x,y,c):
-            graph[int(y*Width+x)]=c
-
-        #convert graph x,y into scientific x,y
-        def devertx(x):
-            return round((x-xMin)/xRange*Width)
-        def deverty(y):
-            return round((y-yMin)/yRange*Height)
 
         sqlQ = "INSERT INTO IR_JoshEllisAlgorithm(CAS_Num, Type, Wavelength, Value) VALUES (?, ?, ?, ?)"
         #save each transformation to file
@@ -106,22 +102,17 @@ def tryWork(Jobs):
             for each in transformDict[k]:
                 d+=[str(each[0])+','+str(each[1])]
                 if addToDB: # add stuff to DB if doesn't exist
-                    dbvalues = (fname, k, each[0], each[1])
+                    dbvalues = (casNum, k, each[0], each[1])
                     cur = conn.cursor()
                     tryWrite(sqlQ,cur, dbvalues)
                 #save data
-                '''
-                f = open(dest+"."+k, "w")
-                for element in d:
-                    f.write(str(element) + '\n')
-                f.close()
-                '''
+
         if addToDB:
             tryCommit(conn)
             addToDB = False
-            return fname+" added to DB"
+            return casNum+" added to DB"
         else:
-            return fname+" already in DB"
+            return casNum+" already in DB"
 
 
 
@@ -148,12 +139,7 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs):
 #---------------------------------Program Main---------------------------------
 if __name__ == "__main__":
 
-    if len(sys.argv)==1:
-        filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
-    else:
-        #use to send updater a list of files
-        filedir=sys.argv[1].split(',')
-        #or something like that
+    filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
 
     Jobs=mp.Queue()
     JobsDoneQ=mp.Queue()
