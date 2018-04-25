@@ -165,30 +165,26 @@ def pix(graph,x,y,width):
     else:
         return True#black
 
-#convert graph x,y into scientific x,y
+#These two functions convert graph x,y into scientific x,y
 def convertx(x, width):
-    #the range each axis of the graph covers
     xMin=200
     xMax=4100
-    xRange=xMax-xMin
+    xRange=xMax-xMin #the x-range of the graph.
     return xMin+xRange*(x/width)
 def converty(y, height):
-    #the range each axis of the graph covers
     yMin=1.02
     yMax=-0.05
-    yRange=yMax-yMin
+    yRange=yMax-yMin #the y-range of the graph.
     return yMin+yRange*(y/height)
 
-'''
-Create graphData list by reading pixels from graph
-    -each entry in data is the range over wich each
-     column has black pixels
-Scale to x and y units
-Save data to file
-'''
+"""
+Creates a graphData list by finding each black pixel on the x axis. For each
+x get the y range over which the graph has black pixels or None if the graph
+is empty at that x value. It stores the min and max y values in the
+graphData list. Then returns the filled graphData List.
+"""
 def drawGraph(width, height, graph):
     graphData=[]#to be filled with values from graph
-
     #For each x get the y range over which the graph has black pixels
     # or None if the graph is empty at that x value
     for x in range(0,width):
@@ -208,9 +204,9 @@ def drawGraph(width, height, graph):
 
     return graphData
 
+#convert graph into datapoints
 def convertToData(graphData, width, height):
-    data=[]#final value written to file
-    #convert graph into datapoints
+    data=[]
     for x in range(len(graphData)):
         #Points in format x,y
         if graphData[x]:
@@ -225,7 +221,7 @@ def ReadGraph(image):
     #the area of each image that we want (the graph)
     targetRect=(113,978,29,724) #(left,right,top,bottom)
 
-    """ Crop the image """
+    #Crops the image
     img = Image.open(image)
     imgdata=list(img.getdata())#the pixels from the image
 
@@ -236,10 +232,11 @@ def ReadGraph(image):
     width=targetRect[1]-targetRect[0]+1
     height=targetRect[3]-targetRect[2]+1
 
+    #Fills graphData with values from 'graph'
     graphData = drawGraph(width, height, graph)
 
+    #final value written to file
     data = convertToData(graphData, width, height)
-
     return(data)
 
 def Cumulative(l,scanrange):
