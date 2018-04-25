@@ -6,6 +6,13 @@ Description: This program will recieve an IR Spectrograph of an unknown
     molecule and use our algorithm to compare that graph to a stored database of
     known molecules and their IR Spectrographs. This program will then return a
     list of the closest Spectrographs matches as determined by our algorithm.
+Query.py: This part of the program recieves the file location of a query IR
+    Spectrograph downloaded by main.js. formatQueryData(queryPath) then formats
+    the query data and returns a dictionary of the formated query data.
+    compareQueryToDB(formatedQueryData) then takes that dictionary and compares
+    it against all of the IR spectrographs imported from our IR spectrum
+    database (IR.db). compareQueryToDB(formatedQueryData) then sends a string
+    back to main.js of the closest IR spectrographs found in the IR.db.
 """
 #---------------------------------Imports--------------------------------------
 import sys
@@ -67,12 +74,12 @@ def formatQueryData(queryPath, transformTypes, filename):
     """ Open the source image """
     images = PullImages(queryPath)  # PullImages() from IR_Functions.py
     data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
-    
+
     copyfile(images[0], "public\\uploads\\" + filename)
 
     def timeStamp(f):
         return int(f.split('.')[0].split('_')[-1])
-    
+
     currentTime=timeStamp(filename)
     holdTime=5*60*1000
     for each in [file for file in os.listdir("public\\uploads") if file.endswith(".jpg")]:
@@ -82,7 +89,7 @@ def formatQueryData(queryPath, transformTypes, filename):
         except:
             pass
     f.close()
-    
+
     os.remove(images[0])  # Cleans up temp data from user's Query.
     if 'temp' in queryPath:
         os.remove(queryPath)
@@ -128,14 +135,14 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     difDict={}
     for tType in transformTypes:
         difDict[tType]=[]
-    
+
     CORES = mp.cpu_count()
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
     ReadRequestQ=mp.Queue()
     DataQ=mp.Queue()
     DataBuffer=CORES*2
-    
+
     for i in range(len(qData)):
         JobsDoneQ.put(i+1)
         ReadRequestQ.put(1)
@@ -179,11 +186,11 @@ def compareQueryToDB(formatedQueryData,transformTypes):
 
 #------------------------------------------------------------------------------
 if __name__ == "__main__":
-    
+
     f=open("public\\types.keys",'r')
     transformTypes=f.readlines()
     f.close()
-    
+
     formatedQueryData = formatQueryData(sys.argv[1],transformTypes, sys.argv[2])
 
     compareQueryToDB(formatedQueryData,transformTypes)

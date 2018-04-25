@@ -1,16 +1,19 @@
 """
-This can be ran from the command line with the pdf file you wish to extract from
-as an argument, it will save the image in the same directory you are in.
+Program: IRSpectrum.py
+Programmed by: Josh Ellis, Josh Hollingsworth, Aaron Kruger, Alex Matthews, and
+    Joseph Sneddon
+Description: This program will recieve an IR Spectrograph of an unknown
+    molecule and use our algorithm to compare that graph to a stored database of
+    known molecules and their IR Spectrographs. This program will then return a
+    list of the closest Spectrographs matches as determined by our algorithm.
+UpdateDB.py: This part of the program imports all pdf files from */IR samples
+    and updates the database (IR.db) with each new compound found.
 """
 #---------------------------------Imports--------------------------------------
-import PyPDF2 #TODO is this used in UpdateDB.py???
 import sys
 import sqlite3
-import warnings #TODO are we still using warnings in UpdateDB.py???
 import os
-from os import path #TODO do we need both import os and from os import path???
-from PIL import Image, ImageTk
-from math import log #TODO I don't think we use this anymore.
+from PIL import Image
 from shutil import copyfile
 import multiprocessing as mp
 import time
@@ -78,28 +81,28 @@ def tryWork(Jobs,transformTypes):
 
         tryWrite(sqlQ, cur)
         tryWrite(sqlData, curData)
-        
+
         qData = cur.fetchall()
         aData = curData.fetchall()
 
         """ if not in the database set the flag to add it """
-        if len(qData)==0: 
-                            
+        if len(qData)==0:
+
             copyfile(images[0],"public\\images\\"+casNum+".jpg")
-            
+
             structure=PullStructure(file)[0]
             CleanStructure(structure)
             copyfile(structure,"public\\info\\"+structure.split("\\")[-1])
             os.remove(structure)
-            
+
             values=PullText(file)
             #Save compound data into the database
             dbvalues = (list(values.values())[0], casNum, list(values.values())[2], list(values.values())[3])
-            
+
             curr = conn.cursor()
             tryWrite(sqlInfo, curr, dbvalues)
             tryCommit(conn)
-            
+
             f=open("public\\info\\"+casNum+".json",'w')
             f.write(str(values).replace("'",'"'))
             f.close()
@@ -128,7 +131,7 @@ def tryWork(Jobs,transformTypes):
 
         tryCommit(conn)
         return casNum+" added to DB"
-        
+
 
 
 
@@ -158,7 +161,7 @@ if __name__ == "__main__":
     f=open("public\\types.keys",'r')
     transformTypes=f.readlines()
     f.close()
-    
+
     #transformTypes=["cumulative.raw.10", "cumulative.raw.20", "cumulative.raw.30"]
 
     #Edit transformTypes to include only a single raw if other raw comparisons exist
@@ -170,7 +173,7 @@ if __name__ == "__main__":
         transformTypes+=['raw']
 
     checkForDB()
-    
+
     filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
 
     Jobs=mp.Queue()

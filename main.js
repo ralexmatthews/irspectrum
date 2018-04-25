@@ -105,7 +105,7 @@ let returnResults = function (winners, res) {
 	// split string of winners into array
 	winners = winners.split(' ');
 
-	// send back JSON of first 4 winners
+	// send back JSON of top 20 results
 	res.send(JSON.stringify({
 		1: winners[0],
 		2: winners[1],

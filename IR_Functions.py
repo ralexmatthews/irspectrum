@@ -1,14 +1,20 @@
 """
-
+Program: IRSpectrum.py
+Programmed by: Josh Ellis, Josh Hollingsworth, Aaron Kruger, Alex Matthews, and
+    Joseph Sneddon
+Description: This program will recieve an IR Spectrograph of an unknown
+    molecule and use our algorithm to compare that graph to a stored database of
+    known molecules and their IR Spectrographs. This program will then return a
+    list of the closest Spectrographs matches as determined by our algorithm.
+IR_Functions.py: This part of the program contains most of the functions used by
+    Query.py and UpdatedDB.py.
 """
 #---------------------------------Imports--------------------------------------
 import PyPDF2
-from PIL import Image, ImageTk #TODO are we using ImageTK still???
+from PIL import Image
 import sys
 import warnings
 import os
-from os import path #TODO do we need both import os and from os import path???
-from shutil import copyfile #TODO are we still using copyfile in IR_Functions???
 
 warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
@@ -134,11 +140,11 @@ def PullText(filename):
 def CleanStructure(filename):
     img = Image.open(filename)
     imgdata=list(img.getdata())#the pixels from the image
-    
+
     img = Image.new('RGBA', (img.size[0],img.size[1]))
-    
+
     imgdata=[(i,i,i,255)  if i<31 else (i,i,i,0) for i in imgdata]
-    
+
     img.putdata(imgdata)
     img.save(filename)
 
@@ -273,7 +279,7 @@ def Compare(tType,subject,query):
     elif "cumulative" in tType and "raw" in tType:
         return directCompare( Cumulative(subject,int(tType.split('.')[-1])),
                              query)
-                            
+
 
 def directCompare(transformation1,transformation2):
     dif=0
