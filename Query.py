@@ -7,12 +7,12 @@ Description: This program will recieve an IR Spectrograph of an unknown
     known molecules and their IR Spectrographs. This program will then return a
     list of the closest Spectrographs matches as determined by our algorithm.
 Query.py: This part of the program recieves the file location of a query IR
-    Spectrograph downloaded by main.js. formatQueryData(queryPath) then formats
-    the query data and returns a dictionary of the formated query data.
-    compareQueryToDB(formatedQueryData) then takes that dictionary and compares
-    it against all of the IR spectrographs imported from our IR spectrum
-    database (IR.db). compareQueryToDB(formatedQueryData) then sends a string
-    back to main.js of the closest IR spectrographs found in the IR.db.
+    Spectrograph downloaded by main.js. formatQueryData() then formats the query
+    data and returns a dictionary, queryDict, of the formated query data.
+    compareQueryToDB() then takes that dictionary and compares it against all of
+    the IR spectrographs imported from our IR spectrum database (IR.db).
+    compareQueryToDB() then sends a string back to main.js of the closest IR
+    spectrographs found in the IR.db.
 """
 #---------------------------------Imports--------------------------------------
 import sys

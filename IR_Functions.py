@@ -148,73 +148,54 @@ def CleanStructure(filename):
     img.putdata(imgdata)
     img.save(filename)
 
-#TODO Should we break this function into smaller parts?
-def ReadGraph(image):
-    #copies pixels from the source image within the targetRect
-    def cropRect(source,rect):
-        left,right,top,bottom=rect
-        newImg=[]
-        for y in range(top,bottom+1):
-            for x in range(left,right+1):
-                newImg+=[source[y*Width+x]]
-        return newImg
+#copies pixels from the source image within the targetRect
+def cropRect(source,rect,width):
+    left,right,top,bottom=rect
+    newImg=[]
+    for y in range(top,bottom+1):
+        for x in range(left,right+1):
+            newImg+=[source[y*width+x]]
+    return newImg
 
-    #checks if the pixel at x,y is black
-    def pix(x,y):
-        r,g,b=graph[y*Width+x]
-        if r+g+b>=100:
-            return False#not black
-        else:
-            return True#black
+#checks if the pixel at x,y is black
+def pix(graph,x,y,width):
+    r,g,b=graph[y*width+x]
+    if r+g+b>=100:
+        return False#not black
+    else:
+        return True#black
 
-    #convert graph x,y into scientific x,y
-    def convertx(x):
-        return xMin+xRange*(x/Width)
-    def converty(y):
-        return yMin+yRange*(y/Height)
-
-    """ Crop the image """
-    img = Image.open(image)
-    imgdata=list(img.getdata())#the pixels from the image
-
-    #this with and height is standard for all IR samples
-    Width=1024
-    Height=768
-
-    #the area of each image that we want (the graph)
-            #(left,right,top,bottom)
-    targetRect=(113,978,29,724)
+#convert graph x,y into scientific x,y
+def convertx(x, width):
+    #the range each axis of the graph covers
+    xMin=200
+    xMax=4100
+    xRange=xMax-xMin
+    return xMin+xRange*(x/width)
+def converty(y, height):
     #the range each axis of the graph covers
     yMin=1.02
     yMax=-0.05
     yRange=yMax-yMin
-    xMin=200
-    xMax=4100
-    xRange=xMax-xMin
+    return yMin+yRange*(y/height)
 
-    #the graph cut out of the larger image
-    graph=cropRect(imgdata,targetRect)
-
-    #width and height of out cropped graph
-    Width=targetRect[1]-targetRect[0]+1
-    Height=targetRect[3]-targetRect[2]+1
-
-    '''
-    Create graphData list by reading pixels from graph
-        -each entry in data is the range over wich each
-         column has black pixels
-    Scale to x and y units
-    Save data to file
-    '''
+'''
+Create graphData list by reading pixels from graph
+    -each entry in data is the range over wich each
+     column has black pixels
+Scale to x and y units
+Save data to file
+'''
+def drawGraph(width, height, graph):
     graphData=[]#to be filled with values from graph
 
     #For each x get the y range over which the graph has black pixels
     # or None if the graph is empty at that x value
-    for x in range(0,Width):
+    for x in range(0,width):
         graphData+=[None]
         foundPix=False#have you found a pixel while looping through the column
-        for y in range(0,Height):
-            p=pix(x,y)#is the pixel black
+        for y in range(0,height):
+            p=pix(graph,x,y,width)#is the pixel black
             if p and not foundPix:
                 #record the first black pixels y value
                 foundPix=True
@@ -225,12 +206,39 @@ def ReadGraph(image):
                 graphData[-1]=(minVal,maxVal)#write these values to data
                 break#next x
 
+    return graphData
+
+def convertToData(graphData, width, height):
     data=[]#final value written to file
     #convert graph into datapoints
     for x in range(len(graphData)):
         #Points in format x,y
         if graphData[x]:
-            data+=[(convertx(x),converty(graphData[x][1]))]
+            data+=[(convertx(x,width),converty(graphData[x][1],height))]
+
+    return data
+
+def ReadGraph(image):
+    #this with and height is standard for all IR samples
+    width=1024
+    height=768
+    #the area of each image that we want (the graph)
+    targetRect=(113,978,29,724) #(left,right,top,bottom)
+
+    """ Crop the image """
+    img = Image.open(image)
+    imgdata=list(img.getdata())#the pixels from the image
+
+    #The graph is cut out of the larger image
+    graph=cropRect(imgdata,targetRect,width)
+
+    #width and height of out cropped graph
+    width=targetRect[1]-targetRect[0]+1
+    height=targetRect[3]-targetRect[2]+1
+
+    graphData = drawGraph(width, height, graph)
+
+    data = convertToData(graphData, width, height)
 
     return(data)
 
@@ -280,7 +288,6 @@ def Compare(tType,subject,query):
         return directCompare( Cumulative(subject,int(tType.split('.')[-1])),
                              query)
 
-
 def directCompare(transformation1,transformation2):
     dif=0
     #Swap if needed, want t1 to be sorter than t2
@@ -310,7 +317,6 @@ def AddSortResults(difDict,casNums):
 
     return difList
 
-#TODO Where is the SmartSortResults() function being used?
 def SmartSortResults(difDict,casNums):
     tranformTypes=list(difDict.keys())[:]
 
