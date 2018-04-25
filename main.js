@@ -36,19 +36,20 @@ app.post('/getmatch', function (req, res) {
 	let form = new formidable.IncomingForm();
 	form.multiples = false;
 	form.uploadDir = path.join(__dirname, '/temp');
-	let filepath;
+	let filepath,
+		oldFilePath,
+		filename,
+		timestamp;
 
 	// parse the incoming file
-	form.parse(req);
+	form.parse(req, (err, fields, files) => {
+		timestamp = fields.timestamp;
+	});
 
 	// save the file as its name in the /temp folder
 	form.on('file', (field, file) => {
-		filepath = path.join(form.uploadDir, file.name);
-		fs.rename(file.path, filepath, err => {
-			if (err) {
-				console.log(err);
-			}
-		});
+		oldFilePath = file.path;
+		filename = file.name;
 	});
 
 	// if something wonky happens
@@ -58,7 +59,14 @@ app.post('/getmatch', function (req, res) {
 
 	// once its finished saving, do the business. This is where the magic comparing happens
 	form.on('end', () => {
-		runJoshsPython(filepath, res);
+		filepath = path.join(form.uploadDir, filename.substring(0, filename.length - 4) + '_' + timestamp + filename.substring(filename.length - 4));
+		console.log(oldFilePath, filepath);
+		fs.rename(oldFilePath, filepath, err => {
+			if (err) {
+				console.log(err);
+			}
+			runJoshsPython(filepath, res, filename.substring(0, filename.length - 4) + '_' + timestamp + '.jpg');
+		});
 	});
 });
 
@@ -68,9 +76,9 @@ const server = app.listen(3000, function () {
 });
 
 // this function runs the python programs
-let runJoshsPython = function (pathToPDF, res) {
+let runJoshsPython = function (pathToPDF, res, filename) {
 	// run 'Compare to Query.py'
-	const comparePy = spawn('python', ['Query.py', pathToPDF]);
+	const comparePy = spawn('python', ['Query.py', pathToPDF, filename]);
 
 	// if something wonky happens let me know
 	comparePy.on('error', err => {
