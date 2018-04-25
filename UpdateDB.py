@@ -22,7 +22,7 @@ from IR_Functions import *
 
 #---------------------------------Classes/Functions----------------------------
 def checkForDB():
-    # if DB file somehow gets deleted re-create it
+    #If IR.db somehow gets deleted then re-create it.
     if not os.path.exists("IR.db"):
         file = open('IR.db', 'w+')
         file.close()
@@ -30,8 +30,11 @@ def checkForDB():
         #os.remove("IR.db")
         pass
 
-    sqlData = "CREATE TABLE IF NOT EXISTS `IR_Data` ( `CAS_Num` TEXT, `Type` TEXT, `Wavelength` NUMERIC, `Value` NUMERIC )"
-    sqlInfo = "CREATE TABLE IF NOT EXISTS `IR_Info` ( `Spectrum_ID` TEXT, `CAS_Num` TEXT, `Formula` TEXT, `Compound_Name` TEXT, PRIMARY KEY(`Spectrum_ID`) )"
+    sqlData = "CREATE TABLE IF NOT EXISTS `IR_Data` ( `CAS_Num` TEXT, `Type` \
+                TEXT, `Wavelength` NUMERIC, `Value` NUMERIC )"
+    sqlInfo = "CREATE TABLE IF NOT EXISTS `IR_Info` ( `Spectrum_ID` TEXT, \
+                `CAS_Num` TEXT, `Formula` TEXT, `Compound_Name` TEXT, \
+                PRIMARY KEY(`Spectrum_ID`) )"
 
     conn = sqlite3.connect(os.path.realpath("IR.db"))
     cur = conn.cursor()
@@ -74,7 +77,8 @@ def tryWork(Jobs,transformTypes):
         conn = sqlite3.connect(os.path.realpath("IR.db"))
         sqlQ = "SELECT CAS_Num FROM IR_Info WHERE CAS_Num='"+casNum+"'"
         sqlData = "SELECT CAS_Num FROM IR_Data WHERE CAS_Num='"+casNum+"'"
-        sqlInfo = "INSERT INTO IR_Info(Spectrum_ID, CAS_Num, Formula, Compound_Name) VALUES (?, ?, ?, ?)"
+        sqlInfo = "INSERT INTO IR_Info(Spectrum_ID, CAS_Num, Formula, \
+                                        Compound_Name) VALUES (?, ?, ?, ?)"
 
         cur = conn.cursor()
         curData = conn.cursor()
@@ -97,7 +101,8 @@ def tryWork(Jobs,transformTypes):
 
             values=PullText(file)
             #Save compound data into the database
-            dbvalues = (list(values.values())[0], casNum, list(values.values())[2], list(values.values())[3])
+            dbvalues = (list(values.values())[0], casNum,
+                        list(values.values())[2], list(values.values())[3])
 
             curr = conn.cursor()
             tryWrite(sqlInfo, curr, dbvalues)
@@ -118,7 +123,8 @@ def tryWork(Jobs,transformTypes):
         for tType in transformTypes:
             transformDict[tType]=Convert(data,tType)
 
-        sqlQ = "INSERT INTO IR_Data(CAS_Num, Type, Wavelength, Value) VALUES (?, ?, ?, ?)"
+        sqlQ = "INSERT INTO IR_Data(CAS_Num, Type, Wavelength, Value) \
+                    VALUES (?, ?, ?, ?)"
         #save each transformation to file
         for k in transformDict:
             d=[]
@@ -150,7 +156,8 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs,transformTypes):
         message=tryWork(Jobs,transformTypes)
         if message:
             jobNo=JobsDoneQ.get()
-            print("[Worker No. "+str(workerNo)+"] "+str(jobNo)+" of "+str(NofJobs)+" "+message)
+            print("[Worker No. "+str(workerNo)+"] "+str(jobNo)+" of "
+                    +str(NofJobs)+" "+message)
         else:
             working=False
 #------------------------------------------------------------------------------
@@ -162,9 +169,11 @@ if __name__ == "__main__":
     transformTypes=f.readlines()
     f.close()
 
-    #transformTypes=["cumulative.raw.10", "cumulative.raw.20", "cumulative.raw.30"]
+    #transformTypes=["cumulative.raw.10", "cumulative.raw.20",
+    #                "cumulative.raw.30"]
 
-    #Edit transformTypes to include only a single raw if other raw comparisons exist
+    #Edits transformTypes to include only a single raw if other raw comparisons
+    #exist in the future.
     raws=[]
     for i in range(len(transformTypes)-1,-1,-1):
         if 'raw' in transformTypes[i]:
@@ -174,7 +183,8 @@ if __name__ == "__main__":
 
     checkForDB()
 
-    filedir=[os.path.join("IR samples",file) for file in os.listdir("IR samples") if file.endswith(".pdf")]
+    filedir=[os.path.join("IR samples",file) for file in
+                os.listdir("IR samples") if file.endswith(".pdf")]
 
     Jobs=mp.Queue()
     JobsDoneQ=mp.Queue()
@@ -187,7 +197,8 @@ if __name__ == "__main__":
     print("Starting")
     start=time.time()
     for i in range(CORES):
-        p[i] = mp.Process(target = worker, args=[Jobs,i,JobsDoneQ,len(filedir),transformTypes])
+        p[i] = mp.Process(target = worker, args=[Jobs,i,JobsDoneQ,len(filedir),
+                                                    transformTypes])
         p[i].start()
     for i in range(CORES):
         p[i].join()
