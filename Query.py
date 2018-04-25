@@ -77,7 +77,7 @@ def formatQueryData(queryPath, filename):
     images = PullImages(queryPath)  # PullImages() from IR_Functions.py
     data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
 
-    copyfile(images[0], "public\\images\\temp.jpg")
+    copyfile(images[0], "public\\uploads\\" + filename)
     os.remove(images[0])  # Cleans up temp data from user's Query.
     if 'temp' in queryPath:
         os.remove(queryPath)
