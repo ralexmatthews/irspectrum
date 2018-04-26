@@ -59,41 +59,47 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
-def timeStamp(f):
-    return int(f.split('.')[0].split('_')[-1])
+class FormateQueryData:
+    def __init__(self, queryPath, transformTypes, filename):
+        """Initialize class variables"""
+        self.queryPath = queryPath
+        self.transformTypes = transformTypes
+        self.filename = filename
 
-def cleanupQueryData(filename, images, queryPath):
-    #Removes all generated query data that is more than 5 min old.
-    currentTime = timeStamp(filename)
-    holdTime=5*60*1000
-    for each in [file for file in os.listdir("public\\uploads")
-                    if file.endswith(".jpg")]:
-        try:
-            if timeStamp(each)<currentTime-holdTime:
-                os.remove("public\\uploads\\"+each)
-        except:
-            pass
-    f.close()
+    def timeStamp(self, f):
+        return int(f.split('.')[0].split('_')[-1])
 
-    #Deletes the temp file downloaded by main.js
-    os.remove(images[0])
-    if 'temp' in queryPath:
-        os.remove(queryPath)
+    def cleanupQueryData(self, filename, images, queryPath):
+        """Removes all generated query data that is more than 5 min old."""
+        currentTime = self.timeStamp(filename)
+        holdTime=5*60*1000
+        for each in [file for file in os.listdir("public\\uploads")
+                        if file.endswith(".jpg")]:
+            try:
+                if self.timeStamp(each)<currentTime-holdTime:
+                    os.remove("public\\uploads\\"+each)
+            except:
+                pass
 
-def formatQueryData(queryPath, transformTypes, filename):
-    #Open the source image
-    images = PullImages(queryPath)  #PullImages() from IR_Functions.py
-    data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
+        #Deletes the temp file downloaded by main.js
+        os.remove(images[0])
+        if 'temp' in queryPath:
+            os.remove(queryPath)
 
-    copyfile(images[0], "public\\uploads\\" + filename)
+    def formatQueryData(self, queryPath, transformTypes, filename):
+        #Open the source image
+        images = PullImages(queryPath)  #PullImages() from IR_Functions.py
+        data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
 
-    #Cleans up temp data from queries.
-    cleanupQueryData(filename, images, queryPath)
+        copyfile(images[0], "public\\uploads\\" + filename)
 
-    #Calculate each transformation. ConvertQuery() from IR_Functions.py
-    queryDict=ConvertQuery(data,transformTypes)
+        #Cleans up temp data from queries.
+        self.cleanupQueryData(filename, images, queryPath)
 
-    return queryDict
+        #Calculate each transformation. ConvertQuery() from IR_Functions.py
+        queryDict=ConvertQuery(data,transformTypes)
+
+        return queryDict
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -135,7 +141,7 @@ def generateDifDict(transformTypes):
 
 def compareQueryToDB(formatedQueryData,transformTypes):
     qData, data = importDB()
-    
+
     dataDict = generateDataDict(qData, data, transformTypes)
 
     difDict = generateDifDict(transformTypes)
@@ -183,19 +189,24 @@ def compareQueryToDB(formatedQueryData,transformTypes):
         #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
 
     #Gives sorted list of Output to main.js
-    print(retString.strip())
+    #print(retString.strip())
+    return retString.strip()
 
     sys.stdout.flush()
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
-if __name__ == "__main__":
+def main(queryPath, filename):
+    if __name__ == "__main__":
 
-    f=open("public\\types.keys",'r')
-    transformTypes=f.readlines()
-    f.close()
+        f=open("public\\types.keys",'r')
+        transformTypes=f.readlines()
+        f.close()
+        query = FormateQueryData(queryPath, transformTypes, filename)
+        formatedQueryData = query.formatQueryData(queryPath, transformTypes, filename)
 
-    formatedQueryData = formatQueryData(sys.argv[1],transformTypes, sys.argv[2])
+        results = compareQueryToDB(formatedQueryData,transformTypes)
+        print(results)
 
-    compareQueryToDB(formatedQueryData,transformTypes)
+main(sys.argv[1], sys.argv[2])
 #---------------------------------End of Program-------------------------------
