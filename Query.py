@@ -23,17 +23,7 @@ import multiprocessing as mp
 from shutil import copyfile
 #------------------------------------------------------------------------------
 
-#---------------------------------Variables------------------------------------
-
-#------------------------------------------------------------------------------
-
-#---------------------------------Classes/Functions----------------------------
-
-#------------------------------------------------------------------------------
-
 #----------------------------Multiprocessing functions-------------------------
-
-
 def work(DataQ, ReturnQ, query, transformTypes):
     try:
         casNum, dataDict = DataQ.get()
@@ -57,8 +47,8 @@ def work(DataQ, ReturnQ, query, transformTypes):
         #'''
         return False
 
-
-def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query, transformTypes):
+def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
+            transformTypes):
     # Worker loop
     working = True
     while working:
@@ -66,23 +56,18 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query, tran
         message = work(DataQ, ReturnQ, query, transformTypes)
         if NofJobs-jobNo <= NofWorkers-1:
             working = False
-
 #------------------------------------------------------------------------------
 
-#---------------------------------Program Main---------------------------------
-def formatQueryData(queryPath, transformTypes, filename):
-    """ Open the source image """
-    images = PullImages(queryPath)  # PullImages() from IR_Functions.py
-    data = ReadGraph(images[0])  # ReadGraph() from IR_Functions.py
+#---------------------------------Classes/Functions----------------------------
+def timeStamp(f):
+    return int(f.split('.')[0].split('_')[-1])
 
-    copyfile(images[0], "public\\uploads\\" + filename)
-
-    def timeStamp(f):
-        return int(f.split('.')[0].split('_')[-1])
-
-    currentTime=timeStamp(filename)
+def cleanupQueryData(filename, images, queryPath):
+    #Removes all generated query data that is more than 5 min old.
+    currentTime = timeStamp(filename)
     holdTime=5*60*1000
-    for each in [file for file in os.listdir("public\\uploads") if file.endswith(".jpg")]:
+    for each in [file for file in os.listdir("public\\uploads")
+                    if file.endswith(".jpg")]:
         try:
             if timeStamp(each)<currentTime-holdTime:
                 os.remove("public\\uploads\\"+each)
@@ -90,13 +75,22 @@ def formatQueryData(queryPath, transformTypes, filename):
             pass
     f.close()
 
-    os.remove(images[0])  # Cleans up temp data from user's Query.
+    #Deletes the temp file downloaded by main.js
+    os.remove(images[0])
     if 'temp' in queryPath:
         os.remove(queryPath)
 
-    #calculate each transformation
-    queryDict={}
-    #Cumulative() from IR_Functions.py
+def formatQueryData(queryPath, transformTypes, filename):
+    #Open the source image
+    images = PullImages(queryPath)  #PullImages() from IR_Functions.py
+    data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
+
+    copyfile(images[0], "public\\uploads\\" + filename)
+
+    #Cleans up temp data from queries.
+    cleanupQueryData(filename, images, queryPath)
+
+    #Calculate each transformation. ConvertQuery() from IR_Functions.py
     queryDict=ConvertQuery(data,transformTypes)
 
     return queryDict
@@ -104,8 +98,7 @@ def formatQueryData(queryPath, transformTypes, filename):
 
 #------------------------------------------------------------------------------
 def compareQueryToDB(formatedQueryData,transformTypes):
-
-    # used to grab the total number of molecules
+    #Used to grab the total number of molecules
     conn = sqlite3.connect(os.path.realpath("IR.db"))
     sqlQ = "SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num"
     cur = conn.cursor()
@@ -131,7 +124,6 @@ def compareQueryToDB(formatedQueryData,transformTypes):
                 if 'raw' in tType:
                     dataDict[data[i][0]][tType]+=[data[i][2:]]
 
-
     difDict={}
     for tType in transformTypes:
         difDict[tType]=[]
@@ -154,10 +146,11 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     p = {}
     for i in range(CORES):
         p[i] = mp.Process(target=worker,
-                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ, formatedQueryData, transformTypes])
+                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ,
+                                formatedQueryData, transformTypes])
         p[i].start()
 
-    # Read returned data from workers, add new read reqests
+    #Read returned data from workers, add new read reqests
     for i in range(DataBuffer, len(qData)+DataBuffer):
         retDict = ReturnQ.get()
         for tType in transformTypes:
@@ -168,23 +161,22 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     for i in range(CORES):
         p[i].join()
 
-    #sort compounds by difference. AddSortResults() from IR_Functions.py
+    #Sort compounds by difference. AddSortResults() from IR_Functions.py
     results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
     retString=""
 
-    # save list of compound differences to file
+    #Save list of compound differences to file
     for i in range(len(results)):
         retString+=results[i][1]+" "
         #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
 
-    # Gives sorted list of Output to main.js
+    #Gives sorted list of Output to main.js
     print(retString.strip())
 
     sys.stdout.flush()
 #------------------------------------------------------------------------------
 
-
-#------------------------------------------------------------------------------
+#---------------------------------Program Main---------------------------------
 if __name__ == "__main__":
 
     f=open("public\\types.keys",'r')
