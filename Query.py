@@ -97,7 +97,7 @@ def formatQueryData(queryPath, transformTypes, filename):
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-def compareQueryToDB(formatedQueryData,transformTypes):
+def importDB():
     #Used to grab the total number of molecules
     conn = sqlite3.connect(os.path.realpath("IR.db"))
     sqlQ = "SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num"
@@ -110,8 +110,10 @@ def compareQueryToDB(formatedQueryData,transformTypes):
     cur.execute(sqlQ)
     data = cur.fetchall()
 
-    dataDict = {}
+    return qData, data
 
+def generateDataDict(qData, data, transformTypes):
+    dataDict = {}
     for i in range(len(qData)):
         dataDict[qData[i][0]] = {}
         for tType in transformTypes:
@@ -123,10 +125,20 @@ def compareQueryToDB(formatedQueryData,transformTypes):
             for tType in transformTypes:
                 if 'raw' in tType:
                     dataDict[data[i][0]][tType]+=[data[i][2:]]
+    return dataDict
 
-    difDict={}
+def generateDifDict(transformTypes):
+    difDict = {}
     for tType in transformTypes:
         difDict[tType]=[]
+    return difDict
+
+def compareQueryToDB(formatedQueryData,transformTypes):
+    qData, data = importDB()
+    
+    dataDict = generateDataDict(qData, data, transformTypes)
+
+    difDict = generateDifDict(transformTypes)
 
     CORES = mp.cpu_count()
     JobsDoneQ=mp.Queue()
