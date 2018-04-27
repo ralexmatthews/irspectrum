@@ -148,96 +148,99 @@ def CleanStructure(filename):
     img.putdata(imgdata)
     img.save(filename)
 
-#copies pixels from the source image within the targetRect
-def cropRect(source,rect,width):
-    left,right,top,bottom=rect
-    newImg=[]
-    for y in range(top,bottom+1):
-        for x in range(left,right+1):
-            newImg+=[source[y*width+x]]
-    return newImg
+class ReadGraph:
+    def __init__(self, image):
+        self.image = image
+        self.xMin=200
+        self.xMax=4100
+        self.xRange=self.xMax-self.xMin #the x-range of the graph.
+        self.yMin=1.02
+        self.yMax=-0.05
+        self.yRange=self.yMax-self.yMin #the y-range of the graph.
+        #this with and height is standard for all IR samples
+        self.width=1024
+        self.height=768
+        #the area of each image that we want (the graph)
+        self.targetRect=(113,978,29,724) #(left,right,top,bottom)
 
-#checks if the pixel at x,y is black
-def pix(graph,x,y,width):
-    r,g,b=graph[y*width+x]
-    if r+g+b>=100:
-        return False#not black
-    else:
-        return True#black
+    #copies pixels from the source image within the targetRect
+    def cropRect(self, source):
+        left,right,top,bottom=self.targetRect
+        newImg=[]
+        for y in range(top,bottom+1):
+            for x in range(left,right+1):
+                newImg+=[source[y*self.width+x]]
+        return newImg
 
-#These two functions convert graph x,y into scientific x,y
-def convertx(x, width):
-    xMin=200
-    xMax=4100
-    xRange=xMax-xMin #the x-range of the graph.
-    return xMin+xRange*(x/width)
-def converty(y, height):
-    yMin=1.02
-    yMax=-0.05
-    yRange=yMax-yMin #the y-range of the graph.
-    return yMin+yRange*(y/height)
+    #checks if the pixel at x,y is black
+    def pix(self, graph,x,y):
+        r,g,b=graph[y*self.width+x]
+        if r+g+b>=100:
+            return False#not black
+        else:
+            return True#black
 
-"""
-Creates a graphData list by finding each black pixel on the x axis. For each
-x get the y range over which the graph has black pixels or None if the graph
-is empty at that x value. It stores the min and max y values in the
-graphData list. Then returns the filled graphData List.
-"""
-def drawGraph(width, height, graph):
-    graphData=[]#to be filled with values from graph
-    #For each x get the y range over which the graph has black pixels
-    # or None if the graph is empty at that x value
-    for x in range(0,width):
-        graphData+=[None]
-        foundPix=False#have you found a pixel while looping through the column
-        for y in range(0,height):
-            p=pix(graph,x,y,width)#is the pixel black
-            if p and not foundPix:
-                #record the first black pixels y value
-                foundPix=True
-                maxVal=y
-            elif not p and foundPix:
-                #record the last black pixels y value
-                minVal=y
-                graphData[-1]=(minVal,maxVal)#write these values to data
-                break#next x
+    #These two functions convert graph x,y into scientific x,y
+    def convertx(self, x):
+        return self.xMin+self.xRange*(x/self.width)
+    def converty(self, y):
+        return self.yMin+self.yRange*(y/self.height)
 
-    return graphData
+    def drawGraph(self, graph):
+        """
+        Creates a graphData list by finding each black pixel on the x axis. For each
+        x get the y range over which the graph has black pixels or None if the graph
+        is empty at that x value. It stores the min and max y values in the
+        graphData list. Then returns the filled graphData List.
+        """
+        graphData=[]#to be filled with values from graph
+        #For each x get the y range over which the graph has black pixels
+        # or None if the graph is empty at that x value
+        for x in range(0,self.width):
+            graphData+=[None]
+            foundPix=False#have you found a pixel while looping through the column
+            for y in range(0,self.height):
+                p=self.pix(graph,x,y)#is the pixel black
+                if p and not foundPix:
+                    #record the first black pixels y value
+                    foundPix=True
+                    maxVal=y
+                elif not p and foundPix:
+                    #record the last black pixels y value
+                    minVal=y
+                    graphData[-1]=(minVal,maxVal)#write these values to data
+                    break#next x
 
-#convert graph into datapoints
-def convertToData(graphData, width, height):
-    data=[]
-    for x in range(len(graphData)):
-        #Points in format x,y
-        if graphData[x]:
-            data+=[(convertx(x,width),converty(graphData[x][1],height))]
+        return graphData
 
-    return data
+    #convert graph into datapoints
+    def convertToData(self, graphData):
+        data=[]
+        for x in range(len(graphData)):
+            #Points in format x,y
+            if graphData[x]:
+                data+=[(self.convertx(x),self.converty(graphData[x][1]))]
 
-def ReadGraph(image):
-    #this with and height is standard for all IR samples
-    width=1024
-    height=768
-    #the area of each image that we want (the graph)
-    targetRect=(113,978,29,724) #(left,right,top,bottom)
+        return data
 
-    #Crops the image
-    img = Image.open(image)
-    imgdata=list(img.getdata())#the pixels from the image
+    def readGraph(self,):
+        #Crops the image
+        img = Image.open(self.image)
+        imgdata=list(img.getdata())#the pixels from the image
 
-    #The graph is cut out of the larger image
-    graph=cropRect(imgdata,targetRect,width)
+        #The graph is cut out of the larger image
+        graph=self.cropRect(imgdata)
 
-    #width and height of out cropped graph
-    width=targetRect[1]-targetRect[0]+1
-    height=targetRect[3]-targetRect[2]+1
+        #width and height of out cropped graph
+        self.width=self.targetRect[1]-self.targetRect[0]+1
+        self.height=self.targetRect[3]-self.targetRect[2]+1
 
-    #Fills graphData with values from 'graph'
-    graphData = drawGraph(width, height, graph)
+        #Fills graphData with values from 'graph'
+        graphData = self.drawGraph(graph)
 
-    #final value written to file
-    data = convertToData(graphData, width, height)
-    return(data)
+        #final value written to file
+        data = self.convertToData(graphData)
+        return(data)
 
 def ConvertQuery(l,tTypes):
     queryDict={}
@@ -303,7 +306,7 @@ class Convert():
 
             #Search right of the point until you run into another peak or off the graph
             # sum the difference between cury and the graph at i+j to find the area right of the peak
-            
+
             s1=0
             j=1
             while i+j<lenl and l[i+j][1] <= cury and j<scanrange:
@@ -319,7 +322,7 @@ class Convert():
 
             #take the lowest of the 2 values
             retlist+=[(curx,min(s1,s2)*cury)]
-                    
+
         return self.Cumulative(self,retlist,scanrange)
 
     def AbsoluteROC(self,l,scanrange):
@@ -330,7 +333,7 @@ class Convert():
         retlist=[]
         for i in range(len(l)-1):
             retlist+=[(l[i][0], abs(l[i+1][1]-l[i][1]) )]
-                    
+
         return self.Cumulative(self,retlist,scanrange)
 
 class Compare():

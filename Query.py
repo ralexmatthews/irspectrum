@@ -69,9 +69,9 @@ class FormateQueryData:
     def timeStamp(self, f):
         return int(f.split('.')[0].split('_')[-1])
 
-    def cleanupQueryData(self, filename, images, queryPath):
+    def cleanupQueryData(self, images):
         """Removes all generated query data that is more than 5 min old."""
-        currentTime = self.timeStamp(filename)
+        currentTime = self.timeStamp(self.filename)
         holdTime=5*60*1000
         for each in [file for file in os.listdir("public\\uploads")
                         if file.endswith(".jpg")]:
@@ -83,21 +83,22 @@ class FormateQueryData:
 
         #Deletes the temp file downloaded by main.js
         os.remove(images[0])
-        if 'temp' in queryPath:
-            os.remove(queryPath)
+        if 'temp' in self.queryPath:
+            os.remove(self.queryPath)
 
-    def formatQueryData(self, queryPath, transformTypes, filename):
+    def formatQueryData(self):
         #Open the source image
-        images = PullImages(queryPath)  #PullImages() from IR_Functions.py
-        data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
-
-        copyfile(images[0], "public\\uploads\\" + filename)
+        images = PullImages(self.queryPath)  #PullImages() from IR_Functions.py
+        graph = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
+        data = graph.readGraph()
+        
+        copyfile(images[0], "public\\uploads\\" + self.filename)
 
         #Cleans up temp data from queries.
-        self.cleanupQueryData(filename, images, queryPath)
+        self.cleanupQueryData(images)
 
         #Calculate each transformation. ConvertQuery() from IR_Functions.py
-        queryDict=ConvertQuery(data,transformTypes)
+        queryDict=ConvertQuery(data,self.transformTypes)
 
         return queryDict
 #------------------------------------------------------------------------------
@@ -202,12 +203,8 @@ def main(queryPath, filename):
         f=open("public\\types.keys",'r')
         transformTypes=f.readlines()
         f.close()
-        transformTypes=[line for line in \
-                    [lines.strip() for lines in transformTypes] \
-                    if len(line)]
-        
         query = FormateQueryData(queryPath, transformTypes, filename)
-        formatedQueryData = query.formatQueryData(queryPath, transformTypes, filename)
+        formatedQueryData = query.formatQueryData()
 
         results = compareQueryToDB(formatedQueryData,transformTypes)
         print(results)

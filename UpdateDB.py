@@ -115,7 +115,9 @@ def tryWork(Jobs,transformTypes):
             os.remove(images[0])
             return casNum+" already in DB"
 
-        data=ReadGraph(images[0])
+        graph = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
+        data = graph.readGraph()
+        
         os.remove(images[0])
 
         #calculate each transformation
