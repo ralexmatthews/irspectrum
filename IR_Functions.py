@@ -239,28 +239,6 @@ def ReadGraph(image):
     data = convertToData(graphData, width, height)
     return(data)
 
-def Cumulative(l,scanrange):
-    l=['x']+l[:]+['x']
-    divisor=0
-    total=0
-    for i in range(1,scanrange+1):
-        divisor+=max(0.1,l[i][1])
-    retlist=[]
-    for i in range(1,len(l)-1):
-
-        low=max(0,i-scanrange)
-        high=min(len(l)-1,i+scanrange)
-
-        total-=max(0.1,l[low][1]) if l[low]!="x" else 0
-        total+=max(0.1,l[i][1]) if l[i]!="x" else 0
-
-        divisor-=max(0.1,l[low][1]) if l[low]!="x" else 0
-        divisor+=max(0.1,l[high][1]) if l[high]!="x" else 0
-
-        retlist+=[(l[i][0],total/divisor)]
-
-    return retlist
-
 def Raw(l):
     return l
 
@@ -268,38 +246,60 @@ def ConvertQuery(l,tTypes):
     queryDict={}
     for tType in tTypes:
         queryDict[tType]=[]
-        if "cumulative" in tType:
-            queryDict[tType]+=Cumulative(l,int(tType.split('.')[-1]))
+        queryDict[tType]+=Convert(l,tType,ignoreRaw=True)
     return queryDict
 
-def Convert(l,tType):
-    if "raw" in tType:
-        return l
-    elif "cumulative" in tType:
-        return Cumulative(l,int(tType.split('.')[-1]))
+class Convert():
+    def __new__(self,l,tType,ignoreRaw=False):
+        if "raw" in tType and not ignoreRaw:
+            return l
+        elif "cumulative" in tType:
+            return self.Cumulative(self,l,int(tType.split('.')[-1]))
 
-def Compare(tType,subject,query):
-    if "cumulative" in tType and not "raw" in tType:
-        return directCompare(subject,query)
-    elif "cumulative" in tType and "raw" in tType:
-        return directCompare( Cumulative(subject,int(tType.split('.')[-1])),
-                             query)
+    def Cumulative(self,l,scanrange):
+        l=['x']+l[:]+['x']
+        divisor=0
+        total=0
+        for i in range(1,scanrange+1):
+            divisor+=max(0.1,l[i][1])
+        retlist=[]
+        for i in range(1,len(l)-1):
 
-def directCompare(transformation1,transformation2):
-    dif=0
-    #Swap if needed, want t1 to be sorter than t2
-    if len(transformation1)>len(transformation2):
-        tmp=transformation1[:]
-        transformation1=transformation2[:]
-        transformation2=tmp
+            low=max(0,i-scanrange)
+            high=min(len(l)-1,i+scanrange)
 
-    k=0
-    for j in range(len(transformation1)):
-        while transformation1[j][0]>transformation2[k][0] and k<len(transformation2)-1:
-            k+=1
-        dif+=abs(transformation1[j][1]-transformation2[k][1])
+            total-=max(0.1,l[low][1]) if l[low]!="x" else 0
+            total+=max(0.1,l[i][1]) if l[i]!="x" else 0
 
-    return dif
+            divisor-=max(0.1,l[low][1]) if l[low]!="x" else 0
+            divisor+=max(0.1,l[high][1]) if l[high]!="x" else 0
+
+            retlist+=[(l[i][0],total/divisor)]
+
+        return retlist
+
+class Compare():
+    def __new__(self,tType,subject,query):
+        if not "raw" in tType:
+            return self.directCompare( subject,query,tType)
+        elif "cumulative" in tType and "raw" in tType:
+            return self.directCompare( Convert(subject,tType,ignoreRaw=True) ,query,tType )
+
+    def directCompare(transformation1,transformation2,tType):
+        dif=0
+        #Swap if needed, want t1 to be sorter than t2
+        if len(transformation1)>len(transformation2):
+            tmp=transformation1[:]
+            transformation1=transformation2[:]
+            transformation2=tmp
+
+        k=0
+        for j in range(len(transformation1)):
+            while transformation1[j][0]>transformation2[k][0] and k<len(transformation2)-1:
+                k+=1
+            dif+=abs(transformation1[j][1]-transformation2[k][1])
+
+        return dif
 
 def AddSortResults(difDict,casNums):
     tranformTypes=list(difDict.keys())[:]
