@@ -11,6 +11,7 @@ IR_Functions.py: This part of the program contains most of the functions used by
 """
 #---------------------------------Imports--------------------------------------
 import PyPDF2
+import sqlite3
 from PIL import Image
 import sys
 import warnings
@@ -20,7 +21,7 @@ warnings.filterwarnings("ignore")
 #------------------------------------------------------------------------------
 
 #---------------------------------Variables------------------------------------
-number = 0
+
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
@@ -248,12 +249,12 @@ def ConvertQuery(l,tTypes):
     queryDict={}
     for tType in tTypes:
         queryDict[tType]=[]
-        queryDict[tType]+=Convert(l,tType)
+        queryDict[tType]+=Convert(l,tType,ignoreRaw=True)
     return queryDict
 
 class Convert():
-    def __new__(self,l,tType):
-        if "raw" == tType:
+    def __new__(self,l,tType,ignoreRaw=False):
+        if "raw" in tType and not ignoreRaw:
             return l
         else:
             if tType.split('.')[0] == "Cumulative":
@@ -340,11 +341,11 @@ class Convert():
 
 class Compare():
     def __new__(self,tType,subject,query):
-        if not "raw" in tType or "raw" == tType:
+        if not "raw" in tType:
             return self.directCompare(self,subject,query)
         else:
             if tType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
-                return self.directCompare(self, Convert(subject,tType) ,query)
+                return self.directCompare(self, Convert(subject,tType,ignoreRaw=True) ,query)
         raise ValueError("Compare type not found: "+str(tType))
 
     def directCompare(self,transformation1,transformation2):
@@ -405,4 +406,13 @@ def SmartSortResults(difDict,casNums):
             difList+=tempList
 
     return difList
+
+class IRDB:
+    def __init__(self):
+        self.conn = sqlite3.connect(os.path.realpath("IR.db"))
+        self.cur = self.conn.cursor()
+
+    def searchIRDB(self, sqlQuery):
+        self.cur.execute(sqlQuery)
+        return self.cur.fetchall()
 #------------------------------------------------------------------------------

@@ -16,7 +16,6 @@ Query.py: This part of the program recieves the file location of a query IR
 """
 #---------------------------------Imports--------------------------------------
 import sys
-import sqlite3
 import os
 from IR_Functions import *
 import multiprocessing as mp
@@ -109,17 +108,10 @@ class FormateQueryData:
 
 #------------------------------------------------------------------------------
 def importDB():
-    #Used to grab the total number of molecules
-    conn = sqlite3.connect(os.path.realpath("IR.db"))
-    sqlQ = "SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num"
-    cur = conn.cursor()
-    cur.execute(sqlQ)
-    qData = cur.fetchall()
 
-    sqlQ = "SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data"
-    cur = conn.cursor()
-    cur.execute(sqlQ)
-    data = cur.fetchall()
+    myIRDB = IRDB()
+    qData = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
+    data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
 
     return qData, data
 
