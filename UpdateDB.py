@@ -168,9 +168,9 @@ if __name__ == "__main__":
     f=open("public\\types.keys",'r')
     transformTypes=f.readlines()
     f.close()
-
-    #transformTypes=["cumulative.raw.10", "cumulative.raw.20",
-    #                "cumulative.raw.30"]
+    transformTypes=[line for line in \
+                    [lines.strip() for lines in transformTypes] \
+                    if len(line)]
 
     #Edits transformTypes to include only a single raw if other raw comparisons
     #exist in the future.

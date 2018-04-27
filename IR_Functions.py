@@ -239,9 +239,6 @@ def ReadGraph(image):
     data = convertToData(graphData, width, height)
     return(data)
 
-def Raw(l):
-    return l
-
 def ConvertQuery(l,tTypes):
     queryDict={}
     for tType in tTypes:
@@ -253,8 +250,14 @@ class Convert():
     def __new__(self,l,tType,ignoreRaw=False):
         if "raw" in tType and not ignoreRaw:
             return l
-        elif "cumulative" in tType:
-            return self.Cumulative(self,l,int(tType.split('.')[-1]))
+        else:
+            if tType.split('.')[0] == "Cumulative":
+                return self.Cumulative(self,l,int(tType.split('.')[-1]))
+            elif tType.split('.')[0] == "CumulativePeak":
+                return self.CumulativePeak(self,l,int(tType.split('.')[-1]))
+            elif tType.split('.')[0] == "AbsoluteROC":
+                return self.AbsoluteROC(self,l,int(tType.split('.')[-1]))
+        raise ValueError("Convert type not found: "+str(tType))
 
     def Cumulative(self,l,scanrange):
         l=['x']+l[:]+['x']
@@ -278,14 +281,68 @@ class Convert():
 
         return retlist
 
+    def CumulativePeak(self,l,scanrange):#peak to peak transformation
+        '''
+        Find all peaks in list l
+        Weight peaks by their height and how far they are from other taller peaks
+        '''
+        retlist=[]
+        lenl=len(l)
+        for i in range(lenl):
+
+            #current x and y values for point i in list l
+            curx=l[i][0]
+            cury=l[i][1]
+
+            #If this point has the same y value as the previous point
+            # then continue to the next point
+            if i-1>=0: # and i+1<lenl
+                if (l[i-1][1] == cury):
+                    retlist+=[(curx,0)]
+                    continue
+
+            #Search right of the point until you run into another peak or off the graph
+            # sum the difference between cury and the graph at i+j to find the area right of the peak
+            
+            s1=0
+            j=1
+            while i+j<lenl and l[i+j][1] <= cury and j<scanrange:
+                s1+= (cury - l[i+j][1]) * (l[i+j][0]-l[i+j-1][0])
+                j+=1
+
+            #Same opperation but searching left
+            s2=0
+            j=-1
+            while i+j>=0 and l[i+j][1] <= cury and j>-scanrange:
+                s2+= (cury - l[i+j][1]) * (l[i+j+1][0]-l[i+j][0])
+                j-=1
+
+            #take the lowest of the 2 values
+            retlist+=[(curx,min(s1,s2)*cury)]
+                    
+        return self.Cumulative(self,retlist,scanrange)
+
+    def AbsoluteROC(self,l,scanrange):
+        '''
+        The absolute value of the slope of the curve in list l
+        Note: this method may not be useful for matching compounds
+        '''
+        retlist=[]
+        for i in range(len(l)-1):
+            retlist+=[(l[i][0], abs(l[i+1][1]-l[i][1]) )]
+                    
+        return self.Cumulative(self,retlist,scanrange)
+
 class Compare():
     def __new__(self,tType,subject,query):
         if not "raw" in tType:
-            return self.directCompare( subject,query,tType)
-        elif "cumulative" in tType and "raw" in tType:
-            return self.directCompare( Convert(subject,tType,ignoreRaw=True) ,query,tType )
+            return self.directCompare(self,subject,query)
+        else:
+            if tType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
+                return self.directCompare(self, Convert(subject,tType,ignoreRaw=True) ,query)
+        raise ValueError("Compare type not found: "+str(tType))
 
-    def directCompare(transformation1,transformation2,tType):
+    def directCompare(self,transformation1,transformation2):
         dif=0
         #Swap if needed, want t1 to be sorter than t2
         if len(transformation1)>len(transformation2):

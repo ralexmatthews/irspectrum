@@ -202,6 +202,10 @@ def main(queryPath, filename):
         f=open("public\\types.keys",'r')
         transformTypes=f.readlines()
         f.close()
+        transformTypes=[line for line in \
+                    [lines.strip() for lines in transformTypes] \
+                    if len(line)]
+        
         query = FormateQueryData(queryPath, transformTypes, filename)
         formatedQueryData = query.formatQueryData(queryPath, transformTypes, filename)
 
