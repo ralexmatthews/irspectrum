@@ -60,23 +60,28 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
 
 #---------------------------------Classes/Functions----------------------------
 class FormateQueryData:
-    def __init__(self, queryPath, transformTypes, filename):
-        """Initialize class variables"""
+    def __new__(self, queryPath, transformTypes, filename):
+        """
+        Creates class object and initializes class variables, then returns a
+        dictionary of the formated query data.
+        """
         self.queryPath = queryPath
         self.transformTypes = transformTypes
         self.filename = filename
+
+        return self.formatQueryData(self)
 
     def timeStamp(self, f):
         return int(f.split('.')[0].split('_')[-1])
 
     def cleanupQueryData(self, images):
         """Removes all generated query data that is more than 5 min old."""
-        currentTime = self.timeStamp(self.filename)
+        currentTime = self.timeStamp(self, self.filename)
         holdTime=5*60*1000
         for each in [file for file in os.listdir("public\\uploads")
                         if file.endswith(".jpg")]:
             try:
-                if self.timeStamp(each)<currentTime-holdTime:
+                if self.timeStamp(self, each)<currentTime-holdTime:
                     os.remove("public\\uploads\\"+each)
             except:
                 pass
@@ -90,11 +95,11 @@ class FormateQueryData:
         #Open the source image
         images = PullImages(self.queryPath)  #PullImages() from IR_Functions.py
         data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
-        
+
         copyfile(images[0], "public\\uploads\\" + self.filename)
 
         #Cleans up temp data from queries.
-        self.cleanupQueryData(images)
+        self.cleanupQueryData(self, images)
 
         #Calculate each transformation. ConvertQuery() from IR_Functions.py
         queryDict=ConvertQuery(data,self.transformTypes)
@@ -202,8 +207,8 @@ def main(queryPath, filename):
         f=open("public\\types.keys",'r')
         transformTypes=f.readlines()
         f.close()
-        query = FormateQueryData(queryPath, transformTypes, filename)
-        formatedQueryData = query.formatQueryData()
+        formatedQueryData = FormateQueryData(queryPath, transformTypes, filename)
+        #formatedQueryData = query.formatQueryData()
 
         results = compareQueryToDB(formatedQueryData,transformTypes)
         print(results)
