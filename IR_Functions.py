@@ -149,7 +149,7 @@ def CleanStructure(filename):
     img.save(filename)
 
 class ReadGraph:
-    def __init__(self, image):
+    def __new__(self, image):
         self.image = image
         self.xMin=200
         self.xMax=4100
@@ -162,6 +162,8 @@ class ReadGraph:
         self.height=768
         #the area of each image that we want (the graph)
         self.targetRect=(113,978,29,724) #(left,right,top,bottom)
+
+        return self.readGraph(self)
 
     #copies pixels from the source image within the targetRect
     def cropRect(self, source):
@@ -186,7 +188,7 @@ class ReadGraph:
     def converty(self, y):
         return self.yMin+self.yRange*(y/self.height)
 
-    def drawGraph(self, graph):
+    def convertGraph(self, graph):
         """
         Creates a graphData list by finding each black pixel on the x axis. For each
         x get the y range over which the graph has black pixels or None if the graph
@@ -200,7 +202,7 @@ class ReadGraph:
             graphData+=[None]
             foundPix=False#have you found a pixel while looping through the column
             for y in range(0,self.height):
-                p=self.pix(graph,x,y)#is the pixel black
+                p=self.pix(self,graph,x,y)#is the pixel black
                 if p and not foundPix:
                     #record the first black pixels y value
                     foundPix=True
@@ -214,12 +216,12 @@ class ReadGraph:
         return graphData
 
     #convert graph into datapoints
-    def convertToData(self, graphData):
+    def cleanData(self, graphData):
         data=[]
         for x in range(len(graphData)):
             #Points in format x,y
             if graphData[x]:
-                data+=[(self.convertx(x),self.converty(graphData[x][1]))]
+                data+=[(self.convertx(self,x),self.converty(self,graphData[x][1]))]
 
         return data
 
@@ -229,18 +231,18 @@ class ReadGraph:
         imgdata=list(img.getdata())#the pixels from the image
 
         #The graph is cut out of the larger image
-        graph=self.cropRect(imgdata)
+        graph=self.cropRect(self,imgdata)
 
         #width and height of out cropped graph
         self.width=self.targetRect[1]-self.targetRect[0]+1
         self.height=self.targetRect[3]-self.targetRect[2]+1
 
         #Fills graphData with values from 'graph'
-        graphData = self.drawGraph(graph)
+        graphData = self.convertGraph(self,graph)
 
         #final value written to file
-        data = self.convertToData(graphData)
-        return(data)
+        data = self.cleanData(self,graphData)
+        return data
 
 def ConvertQuery(l,tTypes):
     queryDict={}

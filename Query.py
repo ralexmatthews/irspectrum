@@ -89,8 +89,7 @@ class FormateQueryData:
     def formatQueryData(self):
         #Open the source image
         images = PullImages(self.queryPath)  #PullImages() from IR_Functions.py
-        graph = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
-        data = graph.readGraph()
+        data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
         
         copyfile(images[0], "public\\uploads\\" + self.filename)
 
