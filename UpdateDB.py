@@ -36,32 +36,10 @@ def checkForDB():
                 `CAS_Num` TEXT, `Formula` TEXT, `Compound_Name` TEXT, \
                 PRIMARY KEY(`Spectrum_ID`) )"
 
-    conn = sqlite3.connect(os.path.realpath("IR.db"))
-    cur = conn.cursor()
-    tryWrite(sqlData, cur)
-    tryWrite(sqlInfo, cur)
-    tryCommit(conn)
-
-def tryCommit(conn):
-    trying=True
-    while trying:
-        try:
-            conn.commit()
-            trying=False
-        except Exception as e:
-            pass
-
-def tryWrite(sqlQ,cur,dbvalues=None):
-    trying=True
-    while trying:
-        try:
-            if dbvalues:
-                cur.execute(sqlQ, dbvalues)
-            else:
-                cur.execute(sqlQ)
-            trying=False
-        except Exception as e:
-            pass
+    myIRDB = IRDB()
+    myIRDB.writeIRDB(sqlData)
+    myIRDB.writeIRDB(sqlInfo)
+    myIRDB.commitIRDB()
 
 def tryWork(Jobs,transformTypes):
     try:
@@ -74,20 +52,15 @@ def tryWork(Jobs,transformTypes):
         casNum = fname.split(".")[0]
 
         """ is this file already in the database? """
-        conn = sqlite3.connect(os.path.realpath("IR.db"))
+        myIRDB = IRDB()
         sqlQ = "SELECT CAS_Num FROM IR_Info WHERE CAS_Num='"+casNum+"'"
         sqlData = "SELECT CAS_Num FROM IR_Data WHERE CAS_Num='"+casNum+"'"
         sqlInfo = "INSERT INTO IR_Info(Spectrum_ID, CAS_Num, Formula, \
                                         Compound_Name) VALUES (?, ?, ?, ?)"
 
-        cur = conn.cursor()
-        curData = conn.cursor()
-
-        tryWrite(sqlQ, cur)
-        tryWrite(sqlData, curData)
-
-        qData = cur.fetchall()
-        aData = curData.fetchall()
+        myIRDB.writeIRDB(sqlQ)
+        myIRDB.writeIRDB(sqlData)
+        qData = myIRDB.fetchallIRDB()
 
         """ if not in the database set the flag to add it """
         if len(qData)==0:
@@ -104,9 +77,8 @@ def tryWork(Jobs,transformTypes):
             dbvalues = (list(values.values())[0], casNum,
                         list(values.values())[2], list(values.values())[3])
 
-            curr = conn.cursor()
-            tryWrite(sqlInfo, curr, dbvalues)
-            tryCommit(conn)
+            myIRDB.writeIRDB(sqlInfo, dbvalues)
+            myIRDB.commitIRDB()
 
             f=open("public\\info\\"+casNum+".json",'w')
             f.write(str(values).replace("'",'"'))
@@ -131,11 +103,10 @@ def tryWork(Jobs,transformTypes):
             for each in transformDict[k]:
                 d+=[str(each[0])+','+str(each[1])]
                 dbvalues = (casNum, k, each[0], each[1])
-                currr = conn.cursor()
-                tryWrite(sqlQ, currr, dbvalues)
+                myIRDB.writeIRDB(sqlQ, dbvalues)
                 #save data
 
-        tryCommit(conn)
+        myIRDB.commitIRDB()
         return casNum+" added to DB"
 
 

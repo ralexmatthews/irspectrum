@@ -415,4 +415,24 @@ class IRDB:
     def searchIRDB(self, sqlQuery):
         self.cur.execute(sqlQuery)
         return self.cur.fetchall()
+
+    def writeIRDB(self, sqlWrite, dbValues=None):
+        try:
+            if dbValues:
+                self.cur.execute(sqlWrite, dbValues)
+            else:
+                self.cur.execute(sqlWrite)
+            return True
+        except Exception as e:
+            return False
+
+    def commitIRDB(self):
+        try:
+            self.conn.commit()
+            return True
+        except Exception as e:
+            return False
+
+    def fetchallIRDB(self):
+        return self.cur.fetchall()
 #------------------------------------------------------------------------------
