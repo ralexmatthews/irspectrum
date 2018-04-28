@@ -105,7 +105,7 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
         if NofJobs-jobNo <= NofWorkers-1:
             working = False
 
-def multiProcessControler(formatedQueryData,transformTypes,qData,dataDict,difDict):
+def multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDict):
     CORES = mp.cpu_count()
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
@@ -176,7 +176,7 @@ def compareQueryToDB(formatedQueryData,transformTypes):
 
     difDict = generateDifDict(transformTypes)
 
-    multiProcessControler(formatedQueryData,transformTypes,qData,dataDict,difDict)
+    multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDict)
 
     #Sort compounds by difference. AddSortResults() from IR_Functions.py
     results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
