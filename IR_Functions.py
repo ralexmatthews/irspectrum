@@ -139,6 +139,10 @@ def PullText(filename):
     return {"spectrumID":specID, "cas":cas, "formula":formula, "name":name}
 
 def CleanStructure(filename):
+    '''
+    Changes all of the brightest pixels in a compound structure image
+    to full alpha
+    '''
     img = Image.open(filename)
     imgdata=list(img.getdata())#the pixels from the image
 
@@ -149,8 +153,25 @@ def CleanStructure(filename):
     img.putdata(imgdata)
     img.save(filename)
 
+def ReadComparisonKeys():
+    f=open("public\\types.keys",'r')
+    transformTypes=f.readlines()
+    
+    f.close()
+    transformTypes=[line for line in \
+                    [lines.strip() for lines in transformTypes] \
+                    if len(line)]
+    
+    return transformTypes
+    
+
 class ReadGraph:
+    '''
+    Reads each datapoint in the graph and converts it to an x,y coordinate
+    Each datapoint gets added to a list and returned
+    '''
     def __new__(self, image):
+        '''area of image scanned for data'''
         self.image = image
         self.xMin=200
         self.xMax=4100
@@ -241,69 +262,81 @@ class ReadGraph:
         #Fills graphData with values from 'graph'
         graphData = self.convertGraph(self,graph)
 
-        #final value written to file
+        #return only x,maxy and skip any none values
         data = self.cleanData(self,graphData)
         return data
 
-def ConvertQuery(l,tTypes):
+def ConvertQuery(l,comparisonTypes):
+    '''for each type being processed, convert the query
+    and add the result to a dictionary to be returned'''
     queryDict={}
-    for tType in tTypes:
-        queryDict[tType]=[]
-        queryDict[tType]+=Convert(l,tType)
+    for cType in comparisonTypes:
+        queryDict[cType]=[]
+        queryDict[cType]+=Convert(l,cType)
     return queryDict
 
 class Convert():
-    def __new__(self,l,tType):
-        if "raw" == tType:
-            return l
+    '''
+    takes the raw data and converts it into a format that can be compared later
+    '''
+    def __new__(self,raw,cType):
+        if "raw" == cType:
+            #if the comparison is by raw
+            return raw
         else:
-            if tType.split('.')[0] == "Cumulative":
-                return self.Cumulative(self,l,int(tType.split('.')[-1]))
-            elif tType.split('.')[0] == "CumulativePeak":
-                return self.CumulativePeak(self,l,int(tType.split('.')[-1]))
-            elif tType.split('.')[0] == "AbsoluteROC":
-                return self.AbsoluteROC(self,l,int(tType.split('.')[-1]))
-        raise ValueError("Convert type not found: "+str(tType))
+            #convert the raw data into the appropiate format
+            if cType.split('.')[0] == "Cumulative":
+                return self.Cumulative(self,raw,int(cType.split('.')[-1]))
+            elif cType.split('.')[0] == "CumulativePeak":
+                return self.CumulativePeak(self,raw,int(cType.split('.')[-1]))
+            elif cType.split('.')[0] == "AbsoluteROC":
+                return self.AbsoluteROC(self,raw,int(cType.split('.')[-1]))
+        raise ValueError("Convert type not found: "+str(cType))
 
-    def Cumulative(self,l,scanrange):
-        l=['x']+l[:]+['x']
+    def Cumulative(self,raw,scanrange):
+        '''
+        The value at x=i will be total/divisor
+        where total equals the sum of the points from i-scanrange to i
+        and divisor equals the points from i-scanrange to i+scanrange
+        '''
+        raw=['x']+raw[:]+['x']
         divisor=0
         total=0
         for i in range(1,scanrange+1):
-            divisor+=max(0.1,l[i][1])
+            divisor+=max(0.1,raw[i][1])
         retlist=[]
-        for i in range(1,len(l)-1):
+        for i in range(1,len(raw)-1):
 
             low=max(0,i-scanrange)
-            high=min(len(l)-1,i+scanrange)
+            high=min(len(raw)-1,i+scanrange)
 
-            total-=max(0.1,l[low][1]) if l[low]!="x" else 0
-            total+=max(0.1,l[i][1]) if l[i]!="x" else 0
+            total-=max(0.1,raw[low][1]) if raw[low]!="x" else 0
+            total+=max(0.1,raw[i][1]) if raw[i]!="x" else 0
 
-            divisor-=max(0.1,l[low][1]) if l[low]!="x" else 0
-            divisor+=max(0.1,l[high][1]) if l[high]!="x" else 0
+            divisor-=max(0.1,raw[low][1]) if raw[low]!="x" else 0
+            divisor+=max(0.1,raw[high][1]) if raw[high]!="x" else 0
 
-            retlist+=[(l[i][0],total/divisor)]
+            retlist+=[(raw[i][0],total/divisor)]
 
         return retlist
 
-    def CumulativePeak(self,l,scanrange):#peak to peak transformation
+    def CumulativePeak(self,raw,scanrange):#peak to peak transformation
         '''
         Find all peaks in list l
         Weight peaks by their height and how far they are from other taller peaks
         '''
         retlist=[]
-        lenl=len(l)
+        lenl=len(raw)
         for i in range(lenl):
 
             #current x and y values for point i in list l
-            curx=l[i][0]
-            cury=l[i][1]
+            curx=raw[i][0]
+            cury=raw[i][1]
 
             #If this point has the same y value as the previous point
             # then continue to the next point
-            if i-1>=0: # and i+1<lenl
-                if (l[i-1][1] == cury):
+            if i-1>=0: 
+                if (raw[i-1][1] == cury):
                     retlist+=[(curx,0)]
                     continue
 
@@ -312,15 +345,15 @@ class Convert():
 
             s1=0
             j=1
-            while i+j<lenl and l[i+j][1] <= cury and j<scanrange:
-                s1+= (cury - l[i+j][1]) * (l[i+j][0]-l[i+j-1][0])
+            while i+j<lenl and raw[i+j][1] <= cury and j<scanrange:
+                s1+= (cury - raw[i+j][1]) * (raw[i+j][0]-raw[i+j-1][0])
                 j+=1
 
             #Same opperation but searching left
             s2=0
             j=-1
-            while i+j>=0 and l[i+j][1] <= cury and j>-scanrange:
-                s2+= (cury - l[i+j][1]) * (l[i+j+1][0]-l[i+j][0])
+            while i+j>=0 and raw[i+j][1] <= cury and j>-scanrange:
+                s2+= (cury - raw[i+j][1]) * (raw[i+j+1][0]-raw[i+j][0])
                 j-=1
 
             #take the lowest of the 2 values
@@ -328,61 +361,83 @@ class Convert():
 
         return self.Cumulative(self,retlist,scanrange)
 
-    def AbsoluteROC(self,l,scanrange):
+    def AbsoluteROC(self,raw,scanrange):
         '''
         The absolute value of the slope of the curve in list l
         Note: this method may not be useful for matching compounds
         '''
         retlist=[]
-        for i in range(len(l)-1):
-            retlist+=[(l[i][0], abs(l[i+1][1]-l[i][1]) )]
+        for i in range(len(raw)-1):
+            retlist+=[(raw[i][0], abs(raw[i+1][1]-raw[i][1]) )]
 
         return self.Cumulative(self,retlist,scanrange)
 
 class Compare():
-    def __new__(self,tType,subject,query):
-        if not "raw" in tType or "raw" == tType:
+    '''
+    Compares a query to a subject in the database
+    Converts the subject first if needed
+    '''
+    def __new__(self,cType,subject,query):
+        if not "raw" in cType or "raw" == cType:
+            #if the subject doesn't need to be converted
             return self.directCompare(self,subject,query)
         else:
-            if tType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
-                return self.directCompare(self, Convert(subject,tType) ,query)
-        raise ValueError("Compare type not found: "+str(tType))
+            #else the subject need to be converted
+            if cType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
+                return self.directCompare(self, Convert(subject,cType) ,query)
+        raise ValueError("Compare type not found: "+str(cType))
 
     def directCompare(self,transformation1,transformation2):
-        dif=0
+        '''compares the each x in t1 to the closest x in t2'''
+        difference=0
         #Swap if needed, want t1 to be sorter than t2
         if len(transformation1)>len(transformation2):
             tmp=transformation1[:]
             transformation1=transformation2[:]
             transformation2=tmp
 
-        k=0
-        for j in range(len(transformation1)):
-            while transformation1[j][0]>transformation2[k][0] and k<len(transformation2)-1:
-                k+=1
-            dif+=abs(transformation1[j][1]-transformation2[k][1])
+        x2=0
+        for x1 in range(len(transformation1)):
+            while transformation1[x1][0]>transformation2[x2][0] and x2<len(transformation2)-1:
+                x2+=1
+            difference+=abs(transformation1[x1][1]-transformation2[x2][1])
 
-        return dif
+        return difference
 
-def AddSortResults(difDict,casNums):
-    tranformTypes=list(difDict.keys())[:]
+def AddSortResults(differenceDict,casNums):
+    '''
+    Take a dictionary with casNums as keys filled with dictionaries with types as keys
+    Add the differences of the types for each casnum together and return a sorted list
+    where each element is the compound's difference from the query followed by the casnum
+    '''
+    comparisonTypes=list(differenceDict.keys())[:]
 
-    difList=[]
+    differenceList=[]
     for i in range(len(casNums)):
         dif=0
-        for trform in tranformTypes:
-            dif+=difDict[trform][i][0]
-        difList+=[(dif,difDict[trform][i][1])]
-    difList.sort()
+        for cType in comparisonTypes:
+            dif+=differenceDict[cType][i][0]
+        differenceList+=[(dif,differenceDict[cType][i][1])]
+    differenceList.sort()
 
-    return difList
+    return differenceList
 
-def SmartSortResults(difDict,casNums):
-    tranformTypes=list(difDict.keys())[:]
+def SmartSortResults(differenceDict,casNums):
+    '''
+    Take a dictionary with casNums as keys filled with dictionaries with types as keys
+    Return a sorted list where each element is the compound's difference from
+    the query followed by the casnum
+    
+    The compounds are sorted by first seperating compounds by type and then sorting each list
+    Each list adds its top result to the bestDict, then any compounds that have been paced
+    in the bestDict by the majority of the comparison types are added to the bottom of the
+    difference list
+    '''
+    comparisonTypes=list(differenceDict.keys())[:]
 
-    for trform in tranformTypes:
-        difDict[trform].sort()
-    difList=[]
+    for cType in comparisonTypes:
+        differenceDict[cType].sort()
+    differenceList=[]
 
     bestDict={}
     for i in range(len(casNums)):#casNum
@@ -390,12 +445,12 @@ def SmartSortResults(difDict,casNums):
 
     for i in range(len(casNums)):
         tempList=[]
-        for trform in tranformTypes:
-            if bestDict[difDict[trform][i][1]]!="Done":
-                bestDict[difDict[trform][i][1]]+=[(difDict[trform][i][0],trform)]
+        for cType in comparisonTypes:
+            if bestDict[differenceDict[cType][i][1]]!="Done":
+                bestDict[differenceDict[cType][i][1]]+=[(differenceDict[cType][i][0],cType)]
         for casNum in list(bestDict.keys()):
             if bestDict[casNum]!="Done":
-                if len(bestDict[casNum])>=max(1,len(tranformTypes)//2+1):
+                if len(bestDict[casNum])>=max(1,len(comparisonTypes)//2+1):
                     dif=0
                     for comp in bestDict[casNum]:
                         dif=max(dif,comp[0])
@@ -403,9 +458,9 @@ def SmartSortResults(difDict,casNums):
                     bestDict[casNum]="Done"
         if tempList:
             tempList.sort()
-            difList+=tempList
+            differenceList+=tempList
 
-    return difList
+    return differenceList
 
 class IRDB:
     def __init__(self):

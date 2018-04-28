@@ -41,7 +41,7 @@ def checkForDB():
     myIRDB.writeIRDB(sqlInfo)
     myIRDB.commitIRDB()
 
-def tryWork(Jobs,transformTypes):
+def tryWork(Jobs,comparisonTypes):
     try:
         file = Jobs.get(True,0)
 
@@ -92,8 +92,8 @@ def tryWork(Jobs,transformTypes):
 
         #calculate each transformation
         transformDict={}
-        for tType in transformTypes:
-            transformDict[tType]=Convert(data,tType)
+        for cType in comparisonTypes:
+            transformDict[cType]=Convert(data,cType)
 
         sqlQ = "INSERT INTO IR_Data(CAS_Num, Type, Wavelength, Value) \
                     VALUES (?, ?, ?, ?)"
@@ -121,10 +121,10 @@ def tryWork(Jobs,transformTypes):
         '''
         return False
 
-def worker(Jobs,workerNo,JobsDoneQ,NofJobs,transformTypes):
+def worker(Jobs,workerNo,JobsDoneQ,NofJobs,comparisonTypes):
     working=True
     while working:
-        message=tryWork(Jobs,transformTypes)
+        message=tryWork(Jobs,comparisonTypes)
         if message:
             jobNo=JobsDoneQ.get()
             print("[Worker No. "+str(workerNo)+"] "+str(jobNo)+" of "
@@ -136,21 +136,16 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs,transformTypes):
 #---------------------------------Program Main---------------------------------
 if __name__ == "__main__":
 
-    f=open("public\\types.keys",'r')
-    transformTypes=f.readlines()
-    f.close()
-    transformTypes=[line for line in \
-                    [lines.strip() for lines in transformTypes] \
-                    if len(line)]
+    comparisonTypes=ReadComparisonKeys()
 
-    #Edits transformTypes to include only a single raw if other raw comparisons
+    #Edits comparisonTypes to include only a single raw if other raw comparisons
     #exist in the future.
     raws=[]
-    for i in range(len(transformTypes)-1,-1,-1):
-        if 'raw' in transformTypes[i]:
-            raws+=[transformTypes.pop(i)]
+    for i in range(len(comparisonTypes)-1,-1,-1):
+        if 'raw' in comparisonTypes[i]:
+            raws+=[comparisonTypes.pop(i)]
     if len(raws)>0:
-        transformTypes+=['raw']
+        comparisonTypes+=['raw']
 
     checkForDB()
 
@@ -169,7 +164,7 @@ if __name__ == "__main__":
     start=time.time()
     for i in range(CORES):
         p[i] = mp.Process(target = worker, args=[Jobs,i,JobsDoneQ,len(filedir),
-                                                    transformTypes])
+                                                    comparisonTypes])
         p[i].start()
     for i in range(CORES):
         p[i].join()

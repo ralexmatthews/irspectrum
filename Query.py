@@ -23,14 +23,14 @@ from shutil import copyfile
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
-class FormateQueryData:
-    def __new__(self, queryPath, transformTypes, filename):
+class FormatQueryData:
+    def __new__(self, queryPath, comparisonTypes, filename):
         """
         Creates class object and initializes class variables, then returns a
         dictionary of the formated query data.
         """
         self.queryPath = queryPath
-        self.transformTypes = transformTypes
+        self.comparisonTypes = comparisonTypes
         self.filename = filename
 
         return self.formatQueryData(self)
@@ -58,7 +58,7 @@ class FormateQueryData:
     def formatQueryData(self):
         #Open the source image
         images = PullImages(self.queryPath)  #PullImages() from IR_Functions.py
-        data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
+        IR_Data = ReadGraph(images[0])  #ReadGraph() from IR_Functions.py
 
         copyfile(images[0], "public\\uploads\\" + self.filename)
 
@@ -66,23 +66,23 @@ class FormateQueryData:
         self.cleanupQueryData(self, images)
 
         #Calculate each transformation. ConvertQuery() from IR_Functions.py
-        queryDict=ConvertQuery(data,self.transformTypes)
+        queryDict=ConvertQuery(IR_Data,self.comparisonTypes)
 
         return queryDict
 #------------------------------------------------------------------------------
 
 #----------------------------Multiprocessing functions-------------------------
-def work(DataQ, ReturnQ, query, transformTypes):
+def work(DataQ, ReturnQ, query, comparisonTypes):
     try:
         casNum, dataDict = DataQ.get()
 
         difDict = {}
-        for tType in transformTypes:
-            difDict[tType] = []
+        for cType in comparisonTypes:
+            difDict[cType] = []
 
-            dif=Compare(tType,dataDict[tType],query[tType])
+            dif=Compare(cType,dataDict[cType],query[cType])
 
-            difDict[tType] += [(dif, casNum)]
+            difDict[cType] += [(dif, casNum)]
         ReturnQ.put(difDict)
         return True
     except Exception as e:
@@ -96,16 +96,16 @@ def work(DataQ, ReturnQ, query, transformTypes):
         return False
 
 def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
-            transformTypes):
+            comparisonTypes):
     # Worker loop
     working = True
     while working:
         jobNo = JobsDoneQ.get()
-        message = work(DataQ, ReturnQ, query, transformTypes)
+        message = work(DataQ, ReturnQ, query, comparisonTypes)
         if NofJobs-jobNo <= NofWorkers-1:
             working = False
 
-def multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDict):
+def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict):
     CORES = mp.cpu_count()
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
@@ -113,28 +113,28 @@ def multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDi
     DataQ=mp.Queue()
     DataBuffer=CORES*2
 
-    for i in range(len(qData)):
+    for i in range(len(IR_Info)):
         JobsDoneQ.put(i+1)
         ReadRequestQ.put(1)
     for i in range(DataBuffer):
-        DataQ.put((qData[i][0], dataDict[qData[i][0]]))
+        DataQ.put((IR_Info[i][0], dataDict[IR_Info[i][0]]))
         ReadRequestQ.get()
         ReadRequestQ.put(0)
 
     p = {}
     for i in range(CORES):
         p[i] = mp.Process(target=worker,
-                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ,
-                                formatedQueryData, transformTypes])
+                          args=[i, JobsDoneQ, len(IR_Info), CORES, ReturnQ, DataQ,
+                                formatedQueryData, comparisonTypes])
         p[i].start()
 
     #Read returned data from workers, add new read reqests
-    for i in range(DataBuffer, len(qData)+DataBuffer):
+    for i in range(DataBuffer, len(IR_Info)+DataBuffer):
         retDict = ReturnQ.get()
-        for tType in transformTypes:
-            difDict[tType] += retDict[tType]
+        for cType in comparisonTypes:
+            difDict[cType] += retDict[cType]
         if ReadRequestQ.get():
-            DataQ.put((qData[i][0], dataDict[qData[i][0]]))
+            DataQ.put((IR_Info[i][0], dataDict[IR_Info[i][0]]))
 
     for i in range(CORES):
         p[i].join()
@@ -143,43 +143,43 @@ def multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDi
 #------------------------------------------------------------------------------
 def importDB():
     myIRDB = IRDB()
-    qData = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
-    data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
+    IR_Info = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
+    IR_Data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
 
-    return qData, data
+    return IR_Info, IR_Data
 
-def generateDataDict(qData, data, transformTypes):
+def generateDataDict(IR_Info, IR_Data, comparisonTypes):
     dataDict = {}
-    for i in range(len(qData)):
-        dataDict[qData[i][0]] = {}
-        for tType in transformTypes:
-            dataDict[qData[i][0]][tType] = []
-    for i in range(len(data)):
-        if 'raw'!=data[i][1]:
-            dataDict[data[i][0]][data[i][1]]+=[data[i][2:]]
+    for i in range(len(IR_Info)):
+        dataDict[IR_Info[i][0]] = {}
+        for cType in comparisonTypes:
+            dataDict[IR_Info[i][0]][cType] = []
+    for i in range(len(IR_Data)):
+        if 'raw'!=IR_Data[i][1]:
+            dataDict[IR_Data[i][0]][IR_Data[i][1]]+=[IR_Data[i][2:]]
         else:
-            for tType in transformTypes:
-                if 'raw' in tType:
-                    dataDict[data[i][0]][tType]+=[data[i][2:]]
+            for cType in comparisonTypes:
+                if 'raw' in cType:
+                    dataDict[IR_Data[i][0]][cType]+=[IR_Data[i][2:]]
     return dataDict
 
-def generateDifDict(transformTypes):
+def generateDifDict(comparisonTypes):
     difDict = {}
-    for tType in transformTypes:
-        difDict[tType]=[]
+    for cType in comparisonTypes:
+        difDict[cType]=[]
     return difDict
 
-def compareQueryToDB(formatedQueryData,transformTypes):
-    qData, data = importDB()
+def compareQueryToDB(formatedQueryData,comparisonTypes):
+    IR_Info, IR_Data = importDB()
 
-    dataDict = generateDataDict(qData, data, transformTypes)
+    dataDict = generateDataDict(IR_Info, IR_Data, comparisonTypes)
 
-    difDict = generateDifDict(transformTypes)
+    difDict = generateDifDict(comparisonTypes)
 
-    multiProcessController(formatedQueryData,transformTypes,qData,dataDict,difDict)
+    multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict)
 
     #Sort compounds by difference. AddSortResults() from IR_Functions.py
-    results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
+    results=SmartSortResults(difDict,[a[0] for a in IR_Info])[:min(20,len(IR_Info))]
     retString=""
 
     #Save list of compound differences to file
@@ -195,12 +195,11 @@ def compareQueryToDB(formatedQueryData,transformTypes):
 def main(queryPath, filename):
     if __name__ == "__main__":
 
-        f=open("public\\types.keys",'r')
-        transformTypes=f.readlines()
-        f.close()
-        formatedQueryData = FormateQueryData(queryPath,transformTypes,filename)
+        comparisonTypes=ReadComparisonKeys()
+        
+        formatedQueryData = FormatQueryData(queryPath,comparisonTypes,filename)
 
-        results = compareQueryToDB(formatedQueryData,transformTypes)
+        results = compareQueryToDB(formatedQueryData,comparisonTypes)
         print(results)
 
         sys.stdout.flush()
