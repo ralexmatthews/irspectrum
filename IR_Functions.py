@@ -249,12 +249,12 @@ def ConvertQuery(l,tTypes):
     queryDict={}
     for tType in tTypes:
         queryDict[tType]=[]
-        queryDict[tType]+=Convert(l,tType,ignoreRaw=True)
+        queryDict[tType]+=Convert(l,tType)
     return queryDict
 
 class Convert():
-    def __new__(self,l,tType,ignoreRaw=False):
-        if "raw" in tType and not ignoreRaw:
+    def __new__(self,l,tType):
+        if "raw" == tType:
             return l
         else:
             if tType.split('.')[0] == "Cumulative":
@@ -341,11 +341,11 @@ class Convert():
 
 class Compare():
     def __new__(self,tType,subject,query):
-        if not "raw" in tType:
+        if not "raw" in tType or "raw" == tType:
             return self.directCompare(self,subject,query)
         else:
             if tType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
-                return self.directCompare(self, Convert(subject,tType,ignoreRaw=True) ,query)
+                return self.directCompare(self, Convert(subject,tType) ,query)
         raise ValueError("Compare type not found: "+str(tType))
 
     def directCompare(self,transformation1,transformation2):

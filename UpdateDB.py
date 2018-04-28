@@ -118,7 +118,7 @@ def tryWork(Jobs,transformTypes):
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb))
-        #'''
+        '''
         return False
 
 def worker(Jobs,workerNo,JobsDoneQ,NofJobs,transformTypes):
