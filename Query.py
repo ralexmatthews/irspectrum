@@ -22,41 +22,6 @@ import multiprocessing as mp
 from shutil import copyfile
 #------------------------------------------------------------------------------
 
-#----------------------------Multiprocessing functions-------------------------
-def work(DataQ, ReturnQ, query, transformTypes):
-    try:
-        casNum, dataDict = DataQ.get()
-
-        difDict = {}
-        for tType in transformTypes:
-            difDict[tType] = []
-
-            dif=Compare(tType,dataDict[tType],query[tType])
-
-            difDict[tType] += [(dif, casNum)]
-        ReturnQ.put(difDict)
-        return True
-    except Exception as e:
-        #uncomment to debug
-        #'''
-        print('\nERROR!:')
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        print('%s' % e)
-        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
-        #'''
-        return False
-
-def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
-            transformTypes):
-    # Worker loop
-    working = True
-    while working:
-        jobNo = JobsDoneQ.get()
-        message = work(DataQ, ReturnQ, query, transformTypes)
-        if NofJobs-jobNo <= NofWorkers-1:
-            working = False
-#------------------------------------------------------------------------------
-
 #---------------------------------Classes/Functions----------------------------
 class FormateQueryData:
     def __new__(self, queryPath, transformTypes, filename):
@@ -106,9 +71,77 @@ class FormateQueryData:
         return queryDict
 #------------------------------------------------------------------------------
 
+#----------------------------Multiprocessing functions-------------------------
+def work(DataQ, ReturnQ, query, transformTypes):
+    try:
+        casNum, dataDict = DataQ.get()
+
+        difDict = {}
+        for tType in transformTypes:
+            difDict[tType] = []
+
+            dif=Compare(tType,dataDict[tType],query[tType])
+
+            difDict[tType] += [(dif, casNum)]
+        ReturnQ.put(difDict)
+        return True
+    except Exception as e:
+        #uncomment to debug
+        #'''
+        print('\nERROR!:')
+        exc_type, exc_obj, exc_tb = sys.exc_info()
+        print('%s' % e)
+        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
+        #'''
+        return False
+
+def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
+            transformTypes):
+    # Worker loop
+    working = True
+    while working:
+        jobNo = JobsDoneQ.get()
+        message = work(DataQ, ReturnQ, query, transformTypes)
+        if NofJobs-jobNo <= NofWorkers-1:
+            working = False
+
+def multiProcessControler(formatedQueryData,transformTypes,qData,dataDict,difDict):
+    CORES = mp.cpu_count()
+    JobsDoneQ=mp.Queue()
+    ReturnQ=mp.Queue()
+    ReadRequestQ=mp.Queue()
+    DataQ=mp.Queue()
+    DataBuffer=CORES*2
+
+    for i in range(len(qData)):
+        JobsDoneQ.put(i+1)
+        ReadRequestQ.put(1)
+    for i in range(DataBuffer):
+        DataQ.put((qData[i][0], dataDict[qData[i][0]]))
+        ReadRequestQ.get()
+        ReadRequestQ.put(0)
+
+    p = {}
+    for i in range(CORES):
+        p[i] = mp.Process(target=worker,
+                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ,
+                                formatedQueryData, transformTypes])
+        p[i].start()
+
+    #Read returned data from workers, add new read reqests
+    for i in range(DataBuffer, len(qData)+DataBuffer):
+        retDict = ReturnQ.get()
+        for tType in transformTypes:
+            difDict[tType] += retDict[tType]
+        if ReadRequestQ.get():
+            DataQ.put((qData[i][0], dataDict[qData[i][0]]))
+
+    for i in range(CORES):
+        p[i].join()
+#------------------------------------------------------------------------------
+
 #------------------------------------------------------------------------------
 def importDB():
-
     myIRDB = IRDB()
     qData = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
     data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
@@ -143,38 +176,7 @@ def compareQueryToDB(formatedQueryData,transformTypes):
 
     difDict = generateDifDict(transformTypes)
 
-    CORES = mp.cpu_count()
-    JobsDoneQ=mp.Queue()
-    ReturnQ=mp.Queue()
-    ReadRequestQ=mp.Queue()
-    DataQ=mp.Queue()
-    DataBuffer=CORES*2
-
-    for i in range(len(qData)):
-        JobsDoneQ.put(i+1)
-        ReadRequestQ.put(1)
-    for i in range(DataBuffer):
-        DataQ.put((qData[i][0], dataDict[qData[i][0]]))
-        ReadRequestQ.get()
-        ReadRequestQ.put(0)
-
-    p = {}
-    for i in range(CORES):
-        p[i] = mp.Process(target=worker,
-                          args=[i, JobsDoneQ, len(qData), CORES, ReturnQ, DataQ,
-                                formatedQueryData, transformTypes])
-        p[i].start()
-
-    #Read returned data from workers, add new read reqests
-    for i in range(DataBuffer, len(qData)+DataBuffer):
-        retDict = ReturnQ.get()
-        for tType in transformTypes:
-            difDict[tType] += retDict[tType]
-        if ReadRequestQ.get():
-            DataQ.put((qData[i][0], dataDict[qData[i][0]]))
-
-    for i in range(CORES):
-        p[i].join()
+    multiProcessControler(formatedQueryData,transformTypes,qData,dataDict,difDict)
 
     #Sort compounds by difference. AddSortResults() from IR_Functions.py
     results=SmartSortResults(difDict,[a[0] for a in qData])[:min(20,len(qData))]
@@ -186,10 +188,7 @@ def compareQueryToDB(formatedQueryData,transformTypes):
         #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
 
     #Gives sorted list of Output to main.js
-    #print(retString.strip())
     return retString.strip()
-
-    sys.stdout.flush()
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
@@ -199,11 +198,11 @@ def main(queryPath, filename):
         f=open("public\\types.keys",'r')
         transformTypes=f.readlines()
         f.close()
-        formatedQueryData = FormateQueryData(queryPath, transformTypes, filename)
-        #formatedQueryData = query.formatQueryData()
+        formatedQueryData = FormateQueryData(queryPath,transformTypes,filename)
 
         results = compareQueryToDB(formatedQueryData,transformTypes)
         print(results)
 
+        sys.stdout.flush()
 main(sys.argv[1], sys.argv[2])
 #---------------------------------End of Program-------------------------------

@@ -158,7 +158,7 @@ class ReadGraph:
         self.yMin=1.02
         self.yMax=-0.05
         self.yRange=self.yMax-self.yMin #the y-range of the graph.
-        #this with and height is standard for all IR samples
+        #This is the width and height standard for all IR samples
         self.width=1024
         self.height=768
         #the area of each image that we want (the graph)
