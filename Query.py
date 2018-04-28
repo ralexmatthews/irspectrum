@@ -86,13 +86,10 @@ def work(DataQ, ReturnQ, query, comparisonTypes):
         ReturnQ.put(difDict)
         return True
     except Exception as e:
-        #uncomment to debug
-        #'''
         print('\nERROR!:')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
-        #'''
         return False
 
 def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,

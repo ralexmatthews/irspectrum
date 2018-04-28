@@ -113,15 +113,13 @@ def tryWork(Jobs,comparisonTypes):
 
 
     except Exception as e:
-        #uncomment to debug
-        '''
+        print('\nERROR!:')
         exc_type, exc_obj, exc_tb = sys.exc_info()
         print('%s' % e)
-        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb))
-        '''
+        print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
         return False
 
-def worker(Jobs,workerNo,JobsDoneQ,NofJobs,comparisonTypes):
+def worker(Jobs,workerNo,NofWorkers,JobsDoneQ,NofJobs,comparisonTypes):
     working=True
     while working:
         message=tryWork(Jobs,comparisonTypes)
@@ -129,6 +127,8 @@ def worker(Jobs,workerNo,JobsDoneQ,NofJobs,comparisonTypes):
             jobNo=JobsDoneQ.get()
             print("[Worker No. "+str(workerNo)+"] "+str(jobNo)+" of "
                     +str(NofJobs)+" "+message)
+            if NofJobs-jobNo <= NofWorkers-1:
+                working = False
         else:
             working=False
 #------------------------------------------------------------------------------
@@ -138,8 +138,8 @@ if __name__ == "__main__":
 
     comparisonTypes=ReadComparisonKeys()
 
-    #Edits comparisonTypes to include only a single raw if other raw comparisons
-    #exist in the future.
+    #Edits comparisonTypes to include only a single raw
+    #comparisons with the raw argument will be calculated in the future.
     raws=[]
     for i in range(len(comparisonTypes)-1,-1,-1):
         if 'raw' in comparisonTypes[i]:
@@ -163,7 +163,7 @@ if __name__ == "__main__":
     print("Starting")
     start=time.time()
     for i in range(CORES):
-        p[i] = mp.Process(target = worker, args=[Jobs,i,JobsDoneQ,len(filedir),
+        p[i] = mp.Process(target = worker, args=[Jobs,i,CORES,JobsDoneQ,len(filedir),
                                                     comparisonTypes])
         p[i].start()
     for i in range(CORES):
