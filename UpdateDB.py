@@ -112,7 +112,9 @@ def tryWork(Jobs,comparisonTypes):
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
         return False
+#------------------------------------------------------------------------------
 
+#----------------------------Multiprocessing functions-------------------------
 def worker(Jobs,workerNo,NofWorkers,JobsDoneQ,NofJobs,comparisonTypes):
     working=True
     while working:
@@ -125,24 +127,8 @@ def worker(Jobs,workerNo,NofWorkers,JobsDoneQ,NofJobs,comparisonTypes):
                 working = False
         else:
             working=False
-#------------------------------------------------------------------------------
 
-#---------------------------------Program Main---------------------------------
-if __name__ == "__main__":
-
-    comparisonTypes=ReadComparisonKeys()
-
-    #Edits comparisonTypes to include only a single raw
-    #comparisons with the raw argument will be calculated in the future.
-    raws=[]
-    for icomp in range(len(comparisonTypes)-1,-1,-1):
-        if 'raw' in comparisonTypes[icomp]:
-            raws+=[comparisonTypes.pop(icomp)]
-    if len(raws)>0:
-        comparisonTypes+=['raw']
-
-    checkForDB()
-
+def multiProcessUpdater(comparisonTypes):
     filedir=[os.path.join("IR samples",file) for file in
                 os.listdir("IR samples") if file.endswith(".pdf")]
 
@@ -163,4 +149,26 @@ if __name__ == "__main__":
     for core in range(CORES):
         p[core].join()
     input("Done and Done "+str(time.time()-start))
+#------------------------------------------------------------------------------
+
+#---------------------------------Program Main---------------------------------
+def main():
+    if __name__ == "__main__":
+
+        comparisonTypes=ReadComparisonKeys()
+
+        #Edits comparisonTypes to include only a single raw
+        #comparisons with the raw argument will be calculated in the future.
+        raws=[]
+        for icomp in range(len(comparisonTypes)-1,-1,-1):
+            if 'raw' in comparisonTypes[icomp]:
+                raws+=[comparisonTypes.pop(icomp)]
+        if len(raws)>0:
+            comparisonTypes+=['raw']
+
+        checkForDB()
+
+        multiProcessUpdater(comparisonTypes)
+
+main()
 #---------------------------------End of Program-------------------------------
