@@ -103,38 +103,39 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
             working = False
 
 def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict):
-    CORES = mp.cpu_count()
+    CORES = min(mp.cpu_count(),len(IR_Info))
+    
     JobsDoneQ=mp.Queue()
     ReturnQ=mp.Queue()
     ReadRequestQ=mp.Queue()
     DataQ=mp.Queue()
-    DataBuffer=CORES*2
+    DataBuffer=min(CORES*2,len(IR_Info))
 
-    for i in range(len(IR_Info)):
-        JobsDoneQ.put(i+1)
+    for iCompound in range(len(IR_Info)):
+        JobsDoneQ.put(iCompound+1)
         ReadRequestQ.put(1)
-    for i in range(DataBuffer):
-        DataQ.put((IR_Info[i][0], dataDict[IR_Info[i][0]]))
+    for iCompound in range(DataBuffer):
+        DataQ.put((IR_Info[iCompound][0], dataDict[IR_Info[iCompound][0]]))
         ReadRequestQ.get()
         ReadRequestQ.put(0)
 
     p = {}
-    for i in range(CORES):
-        p[i] = mp.Process(target=worker,
-                          args=[i, JobsDoneQ, len(IR_Info), CORES, ReturnQ, DataQ,
+    for core in range(CORES):
+        p[core] = mp.Process(target=worker,
+                          args=[core, JobsDoneQ, len(IR_Info), CORES, ReturnQ, DataQ,
                                 formatedQueryData, comparisonTypes])
-        p[i].start()
+        p[core].start()
 
     #Read returned data from workers, add new read reqests
-    for i in range(DataBuffer, len(IR_Info)+DataBuffer):
+    for iCompound in range(DataBuffer, len(IR_Info)+DataBuffer):
         retDict = ReturnQ.get()
         for cType in comparisonTypes:
             difDict[cType] += retDict[cType]
         if ReadRequestQ.get():
-            DataQ.put((IR_Info[i][0], dataDict[IR_Info[i][0]]))
+            DataQ.put((IR_Info[iCompound][0], dataDict[IR_Info[iCompound][0]]))
 
-    for i in range(CORES):
-        p[i].join()
+    for core in range(CORES):
+        p[core].join()
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
@@ -147,17 +148,17 @@ def importDB():
 
 def generateDataDict(IR_Info, IR_Data, comparisonTypes):
     dataDict = {}
-    for i in range(len(IR_Info)):
-        dataDict[IR_Info[i][0]] = {}
+    for iCompound in range(len(IR_Info)):
+        dataDict[IR_Info[iCompound][0]] = {}
         for cType in comparisonTypes:
-            dataDict[IR_Info[i][0]][cType] = []
-    for i in range(len(IR_Data)):
-        if 'raw'!=IR_Data[i][1]:
-            dataDict[IR_Data[i][0]][IR_Data[i][1]]+=[IR_Data[i][2:]]
+            dataDict[IR_Info[iCompound][0]][cType] = []
+    for iDBrow in range(len(IR_Data)):
+        if 'raw'!=IR_Data[iDBrow][1]:
+            dataDict[IR_Data[iDBrow][0]][IR_Data[iDBrow][1]]+=[IR_Data[iDBrow][2:]]
         else:
             for cType in comparisonTypes:
                 if 'raw' in cType:
-                    dataDict[IR_Data[i][0]][cType]+=[IR_Data[i][2:]]
+                    dataDict[IR_Data[iDBrow][0]][cType]+=[IR_Data[iDBrow][2:]]
     return dataDict
 
 def generateDifDict(comparisonTypes):
@@ -175,14 +176,13 @@ def compareQueryToDB(formatedQueryData,comparisonTypes):
 
     multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict)
 
-    #Sort compounds by difference. AddSortResults() from IR_Functions.py
+    #Sort compounds by difference. SmartSortResults() from IR_Functions.py
     results=SmartSortResults(difDict,[a[0] for a in IR_Info])[:min(20,len(IR_Info))]
     retString=""
 
     #Save list of compound differences to file
-    for i in range(len(results)):
-        retString+=results[i][1]+" "
-        #retString+=results[i][1]+","+str(int(results[i][0]))+"\n"
+    for iResult in range(len(results)):
+        retString+=results[iResult][1]+" "
 
     #Gives sorted list of Output to main.js
     return retString.strip()

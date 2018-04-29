@@ -26,9 +26,6 @@ def checkForDB():
     if not os.path.exists("IR.db"):
         file = open('IR.db', 'w+')
         file.close()
-    else:
-        #os.remove("IR.db")
-        pass
 
     sqlData = "CREATE TABLE IF NOT EXISTS `IR_Data` ( `CAS_Num` TEXT, `Type` \
                 TEXT, `Wavelength` NUMERIC, `Value` NUMERIC )"
@@ -91,26 +88,23 @@ def tryWork(Jobs,comparisonTypes):
         os.remove(images[0])
 
         #calculate each transformation
-        transformDict={}
+        comparisonDict={}
         for cType in comparisonTypes:
-            transformDict[cType]=Convert(data,cType)
+            comparisonDict[cType]=Convert(data,cType)
 
         sqlQ = "INSERT INTO IR_Data(CAS_Num, Type, Wavelength, Value) \
                     VALUES (?, ?, ?, ?)"
         #save each transformation to file
-        for k in transformDict:
+        for cType in comparisonDict:
             d=[]
-            for each in transformDict[k]:
-                d+=[str(each[0])+','+str(each[1])]
-                dbvalues = (casNum, k, each[0], each[1])
+            for row in comparisonDict[cType]:
+                d+=[str(row[0])+','+str(row[1])]
+                dbvalues = (casNum, cType, row[0], row[1])
                 myIRDB.writeIRDB(sqlQ, dbvalues)
                 #save data
 
         myIRDB.commitIRDB()
         return casNum+" added to DB"
-
-
-
 
     except Exception as e:
         print('\nERROR!:')
@@ -141,9 +135,9 @@ if __name__ == "__main__":
     #Edits comparisonTypes to include only a single raw
     #comparisons with the raw argument will be calculated in the future.
     raws=[]
-    for i in range(len(comparisonTypes)-1,-1,-1):
-        if 'raw' in comparisonTypes[i]:
-            raws+=[comparisonTypes.pop(i)]
+    for icomp in range(len(comparisonTypes)-1,-1,-1):
+        if 'raw' in comparisonTypes[icomp]:
+            raws+=[comparisonTypes.pop(icomp)]
     if len(raws)>0:
         comparisonTypes+=['raw']
 
@@ -158,15 +152,15 @@ if __name__ == "__main__":
         Jobs.put(filedir[i])
         JobsDoneQ.put(i+1)
 
-    CORES = mp.cpu_count()
+    CORES = min(mp.cpu_count(),len(filedir))
     p={}
     print("Starting")
     start=time.time()
-    for i in range(CORES):
-        p[i] = mp.Process(target = worker, args=[Jobs,i,CORES,JobsDoneQ,len(filedir),
+    for core in range(CORES):
+        p[core] = mp.Process(target = worker, args=[Jobs,core,CORES,JobsDoneQ,len(filedir),
                                                     comparisonTypes])
-        p[i].start()
-    for i in range(CORES):
-        p[i].join()
+        p[core].start()
+    for core in range(CORES):
+        p[core].join()
     input("Done and Done "+str(time.time()-start))
 #---------------------------------End of Program-------------------------------
