@@ -148,7 +148,7 @@ def multiProcessUpdater(comparisonTypes):
         p[core].start()
     for core in range(CORES):
         p[core].join()
-    input("Done and Done "+str(time.time()-start))
+    print("Done and Done "+str(time.time()-start))
 #------------------------------------------------------------------------------
 
 #---------------------------------Program Main---------------------------------
