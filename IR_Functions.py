@@ -283,7 +283,7 @@ class Convert():
         if "raw" == cType:
             #if the comparison is by raw
             return raw
-        else:
+        elif '.' in cType:
             #convert the raw data into the appropiate format
             if cType.split('.')[0] == "Cumulative":
                 return self.Cumulative(self,raw,int(cType.split('.')[-1]))
@@ -381,7 +381,7 @@ class Compare():
         if not "raw" in cType or "raw" == cType:
             #if the subject doesn't need to be converted
             return self.directCompare(self,subject,query)
-        else:
+        elif "." in cType:
             #else the subject need to be converted
             if cType.split('.')[0] in ["Cumulative","CumulativePeak","AbsoluteROC"]:
                 return self.directCompare(self, Convert(subject,cType) ,query)
@@ -416,7 +416,8 @@ def AddSortResults(differenceDict,casNums):
     for i in range(len(casNums)):
         dif=0
         for cType in comparisonTypes:
-            dif+=differenceDict[cType][i][0]
+            if differenceDict[cType][i]:
+                dif+=differenceDict[cType][i][0]
         differenceList+=[(dif,differenceDict[cType][i][1])]
     differenceList.sort()
 
@@ -446,8 +447,9 @@ def SmartSortResults(differenceDict,casNums):
     for i in range(len(casNums)):
         tempList=[]
         for cType in comparisonTypes:
-            if bestDict[differenceDict[cType][i][1]]!="Done":
-                bestDict[differenceDict[cType][i][1]]+=[(differenceDict[cType][i][0],cType)]
+            if differenceDict[cType][i]!=(0,):#not found due to active update
+                if bestDict[differenceDict[cType][i][1]]!="Done":
+                    bestDict[differenceDict[cType][i][1]]+=[(differenceDict[cType][i][0],cType)]   
         for casNum in list(bestDict.keys()):
             if bestDict[casNum]!="Done":
                 if len(bestDict[casNum])>=max(1,len(comparisonTypes)//2+1):

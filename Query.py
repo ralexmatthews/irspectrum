@@ -86,8 +86,12 @@ def work(DataQ, ReturnQ, query, comparisonTypes):
         ReturnQ.put(differenceDict)
         return True
     except Exception as e:
-        print('\nERROR!:')
         exc_type, exc_obj, exc_tb = sys.exc_info()
+        if int(exc_tb.tb_lineno)==83:
+            #error due to active update
+            ReturnQ.put(None)
+            return False
+        print('\nERROR!:')
         print('%s' % e)
         print("\n"+str(exc_tb.tb_lineno)+" "+str(exc_obj)+" "+str(exc_tb),"\n")
         return False
@@ -98,7 +102,7 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
     working = True
     while working:
         jobNo = JobsDoneQ.get()
-        message = work(DataQ, ReturnQ, query, comparisonTypes)
+        work(DataQ, ReturnQ, query, comparisonTypes)
         if NofJobs-jobNo <= NofWorkers-1:
             working = False
 
@@ -129,8 +133,12 @@ def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,di
     #Read returned data from workers, add new read reqests
     for iCompound in range(DataBuffer, len(IR_Info)+DataBuffer):
         retDict = ReturnQ.get()
-        for cType in comparisonTypes:
-            differenceDict[cType] += retDict[cType]
+        if retDict:
+            for cType in comparisonTypes:
+                differenceDict[cType] += retDict[cType]
+        else:#not found due to active update
+            for cType in comparisonTypes:
+                differenceDict[cType] += [(0,)]
         if ReadRequestQ.get():
             DataQ.put((IR_Info[iCompound][0], dataDict[IR_Info[iCompound][0]]))
 
@@ -140,11 +148,14 @@ def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,di
 
 #------------------------------------------------------------------------------
 def importDB():
-    myIRDB = IRDB()
-    IR_Info = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
-    IR_Data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
+    try:
+        myIRDB = IRDB()
+        IR_Info = myIRDB.searchIRDB("SELECT CAS_Num FROM IR_Info GROUP BY CAS_Num")
+        IR_Data=myIRDB.searchIRDB("SELECT CAS_Num,Type,Wavelength,Value FROM IR_Data")
 
-    return IR_Info, IR_Data
+        return IR_Info, IR_Data
+    except:
+        return None
 
 def generateDataDict(IR_Info, IR_Data, comparisonTypes):
     dataDict = {}
@@ -191,15 +202,20 @@ def compareQueryToDB(formatedQueryData,comparisonTypes):
 #---------------------------------Program Main---------------------------------
 def main(queryPath, filename):
 
-    #get comparison types from file
-    comparisonTypes=ReadComparisonKeys()
-    
-    formatedQueryData = FormatQueryData(queryPath,comparisonTypes,filename)
+    if importDB():
+        #get comparison types from file
+        comparisonTypes=ReadComparisonKeys()
+        
+        formatedQueryData = FormatQueryData(queryPath,comparisonTypes,filename)
 
-    results = compareQueryToDB(formatedQueryData,comparisonTypes)
-    print(results)
+        results = compareQueryToDB(formatedQueryData,comparisonTypes)
+        print(results)
 
-    sys.stdout.flush()
+        sys.stdout.flush()
+    else:
+        print("DB_Not_Found")
+
+        sys.stdout.flush()
     
 if __name__ == "__main__":
     main(sys.argv[1], sys.argv[2])
