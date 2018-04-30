@@ -4,5 +4,5 @@ title IRSpectrum Init
 echo Initializing...
 pip install -r requirements.txt
 npm install
-updatedb.py
+python UpdateDB.py
 node main.js
