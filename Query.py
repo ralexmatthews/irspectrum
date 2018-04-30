@@ -41,7 +41,7 @@ class FormatQueryData:
     def cleanupQueryData(self, images):
         """Removes all generated query data that is more than 5 min old."""
         currentTime = self.timeStamp(self, self.filename)
-        holdTime=5*60*1000
+        holdTime=2*60*1000
         for each in [file for file in os.listdir("public\\uploads")
                         if file.endswith(".jpg")]:
             try:
@@ -76,14 +76,14 @@ def work(DataQ, ReturnQ, query, comparisonTypes):
     try:
         casNum, dataDict = DataQ.get()
 
-        difDict = {}
+        differenceDict = {}
         for cType in comparisonTypes:
-            difDict[cType] = []
+            differenceDict[cType] = []
 
             dif=Compare(cType,dataDict[cType],query[cType])
 
-            difDict[cType] += [(dif, casNum)]
-        ReturnQ.put(difDict)
+            differenceDict[cType] += [(dif, casNum)]
+        ReturnQ.put(differenceDict)
         return True
     except Exception as e:
         print('\nERROR!:')
@@ -102,7 +102,7 @@ def worker(workerNo, JobsDoneQ, NofJobs, NofWorkers, ReturnQ, DataQ, query,
         if NofJobs-jobNo <= NofWorkers-1:
             working = False
 
-def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict):
+def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,differenceDict):
     CORES = min(mp.cpu_count(),len(IR_Info))
     
     JobsDoneQ=mp.Queue()
@@ -130,7 +130,7 @@ def multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,di
     for iCompound in range(DataBuffer, len(IR_Info)+DataBuffer):
         retDict = ReturnQ.get()
         for cType in comparisonTypes:
-            difDict[cType] += retDict[cType]
+            differenceDict[cType] += retDict[cType]
         if ReadRequestQ.get():
             DataQ.put((IR_Info[iCompound][0], dataDict[IR_Info[iCompound][0]]))
 
@@ -162,22 +162,22 @@ def generateDataDict(IR_Info, IR_Data, comparisonTypes):
     return dataDict
 
 def generateDifDict(comparisonTypes):
-    difDict = {}
+    differenceDict = {}
     for cType in comparisonTypes:
-        difDict[cType]=[]
-    return difDict
+        differenceDict[cType]=[]
+    return differenceDict
 
 def compareQueryToDB(formatedQueryData,comparisonTypes):
     IR_Info, IR_Data = importDB()
 
     dataDict = generateDataDict(IR_Info, IR_Data, comparisonTypes)
 
-    difDict = generateDifDict(comparisonTypes)
+    differenceDict = generateDifDict(comparisonTypes)
 
-    multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,difDict)
+    multiProcessController(formatedQueryData,comparisonTypes,IR_Info,dataDict,differenceDict)
 
     #Sort compounds by difference. SmartSortResults() from IR_Functions.py
-    results=SmartSortResults(difDict,[a[0] for a in IR_Info])[:min(20,len(IR_Info))]
+    results=SmartSortResults(differenceDict,[a[0] for a in IR_Info])[:min(20,len(IR_Info))]
     retString=""
 
     #Save list of compound differences to file
@@ -190,15 +190,17 @@ def compareQueryToDB(formatedQueryData,comparisonTypes):
 
 #---------------------------------Program Main---------------------------------
 def main(queryPath, filename):
-    if __name__ == "__main__":
 
-        comparisonTypes=ReadComparisonKeys()
-        
-        formatedQueryData = FormatQueryData(queryPath,comparisonTypes,filename)
+    #get comparison types from file
+    comparisonTypes=ReadComparisonKeys()
+    
+    formatedQueryData = FormatQueryData(queryPath,comparisonTypes,filename)
 
-        results = compareQueryToDB(formatedQueryData,comparisonTypes)
-        print(results)
+    results = compareQueryToDB(formatedQueryData,comparisonTypes)
+    print(results)
 
-        sys.stdout.flush()
-main(sys.argv[1], sys.argv[2])
+    sys.stdout.flush()
+    
+if __name__ == "__main__":
+    main(sys.argv[1], sys.argv[2])
 #---------------------------------End of Program-------------------------------

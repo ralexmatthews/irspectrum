@@ -6,7 +6,7 @@ Description: This program will recieve an IR Spectrograph of an unknown
     molecule and use our algorithm to compare that graph to a stored database of
     known molecules and their IR Spectrographs. This program will then return a
     list of the closest Spectrographs matches as determined by our algorithm.
-UpdateDB.py: This part of the program imports all pdf files from */IR samples
+UpdateDB.py: This part of the program imports all pdf files from */IR_samples
     and updates the database (IR.db) with each new compound found.
 """
 #---------------------------------Imports--------------------------------------
@@ -21,7 +21,7 @@ from IR_Functions import *
 #------------------------------------------------------------------------------
 
 #---------------------------------Classes/Functions----------------------------
-def checkForDB():
+def initializeDB():
     #If IR.db somehow gets deleted then re-create it.
     if not os.path.exists("IR.db"):
         file = open('IR.db', 'w+')
@@ -129,8 +129,8 @@ def worker(Jobs,workerNo,NofWorkers,JobsDoneQ,NofJobs,comparisonTypes):
             working=False
 
 def multiProcessUpdater(comparisonTypes):
-    filedir=[os.path.join("IR samples",file) for file in
-                os.listdir("IR samples") if file.endswith(".pdf")]
+    filedir=[os.path.join("IR_samples",file) for file in
+                os.listdir("IR_samples") if file.endswith(".pdf")]
 
     Jobs=mp.Queue()
     JobsDoneQ=mp.Queue()
@@ -153,22 +153,22 @@ def multiProcessUpdater(comparisonTypes):
 
 #---------------------------------Program Main---------------------------------
 def main():
-    if __name__ == "__main__":
 
-        comparisonTypes=ReadComparisonKeys()
+    comparisonTypes=ReadComparisonKeys()
 
-        #Edits comparisonTypes to include only a single raw
-        #comparisons with the raw argument will be calculated in the future.
-        raws=[]
-        for icomp in range(len(comparisonTypes)-1,-1,-1):
-            if 'raw' in comparisonTypes[icomp]:
-                raws+=[comparisonTypes.pop(icomp)]
-        if len(raws)>0:
-            comparisonTypes+=['raw']
+    #Edits comparisonTypes to include only a single raw
+    #comparisons with the raw argument will be calculated in the future.
+    raws=[]
+    for icomp in range(len(comparisonTypes)-1,-1,-1):
+        if 'raw' in comparisonTypes[icomp]:
+            raws+=[comparisonTypes.pop(icomp)]
+    if len(raws)>0:
+        comparisonTypes+=['raw']
 
-        checkForDB()
+    initializeDB()
 
-        multiProcessUpdater(comparisonTypes)
+    multiProcessUpdater(comparisonTypes)
 
-main()
+if __name__ == "__main__":
+    main()
 #---------------------------------End of Program-------------------------------
