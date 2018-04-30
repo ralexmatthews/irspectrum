@@ -40,7 +40,7 @@ def initializeDB():
 
 def tryWork(Jobs,comparisonTypes):
     try:
-        file = Jobs.get(True,0)
+        file = Jobs.get()
 
         """ Open the source image """
         images = PullImages(file)
