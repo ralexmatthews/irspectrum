@@ -10,6 +10,7 @@ To run our application, start by downloading the repository. Once it has been do
 ```console
 npm i
 pip install -r requirements.txt
+python UpdateDB.py
 node main.js
 ```
 
